@@ -10,7 +10,6 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-# pyright: ignore[reportUnknownVariableType]
 def load_model_and_preprocess() -> Tuple[nn.Module, Compose]:
     try:
         device: str = "cuda" if torch.cuda.is_available() else "cpu"
