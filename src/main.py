@@ -31,6 +31,22 @@ def run_embedding_generation():
     generator.generate_embeddings()
 
 
+def run_indexing():
+    from src.indexer.index_builder import IndexBuilder
+
+    embedding_path = os.getenv("EMBEDDINGS_OUTPUT_PATH")
+    index_path = os.getenv("FAISS_INDEX_PATH")
+    metadata_path = os.getenv("FAISS_METADATA_PATH")
+
+    if embedding_path is None or index_path is None or metadata_path is None:
+        raise ValueError(
+            "EMBEDDINGS_OUTPUT_PATH, FAISS_INDEX_PATH, and FAISS_METADATA_PATH environment variables must be set."
+        )
+
+    builder = IndexBuilder(embedding_path, index_path, metadata_path)
+    builder.build_index()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Beer cap matcher CLI.")
     parser.add_argument("--augment", action="store_true", help="Enable generation of augmented pictures")
@@ -44,3 +60,6 @@ if __name__ == "__main__":
 
     if args.generate_embeddings:
         run_embedding_generation()
+
+    if args.index:
+        run_indexing()
