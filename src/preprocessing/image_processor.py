@@ -1,8 +1,8 @@
 from pathlib import Path
-from typing import Union
+from typing import Union, Tuple
 import numpy as np
 from PIL import Image
-from typing import Tuple
+from tqdm import tqdm
 
 from .augmentation import get_augmentation_pipeline
 from src.utils.logger import get_logger
@@ -42,7 +42,7 @@ class ImageAugmenter:
 
         logger.info(f"Found {len(images)} images. Augmenting...")
 
-        for img_path in images:
+        for img_path in tqdm(images, desc="Augmenting images"):
             try:
                 img_array = self.load_image(img_path)
                 for i in range(self.augmentations_per_image):
@@ -51,6 +51,7 @@ class ImageAugmenter:
                     save_path = self.output_dir / filename
                     self.save_image(augmented, save_path)
 
-                logger.info(f"Augmented {img_path.name} × {self.augmentations_per_image}")
             except Exception as e:
                 logger.error(f"Failed to process {img_path.name}: {e}")
+
+        logger.info("Augmentation complete.")
