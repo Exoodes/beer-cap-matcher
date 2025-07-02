@@ -18,10 +18,9 @@ logger = get_logger(__name__)
 
 
 class BeerCapMatcherApp:
-    def __init__(self):
+    def __init__(self, initialize_all: bool = True):
         logger.info("Initializing BeerCapMatcherApp...")
 
-        # Load environment variables
         self.raw_data_dir = os.getenv("RAW_DATA_DIR")
         self.augmented_data_dir = os.getenv("AUGMENTED_DATA_DIR")
         self.u2net_model_path = os.getenv("U2NET_MODEL_PATH")
@@ -36,9 +35,14 @@ class BeerCapMatcherApp:
         self.index_loader: Optional[IndexLoader] = None
         self.querier: Optional[ImageQuerier] = None
 
-        self._initialize_augmenter()
+        if initialize_all:
+            self._initialize_augmenter()
 
     def _initialize_augmenter(self):
+        if not Path(self.u2net_model_path).exists():
+            logger.warning("U2NET model not found. Augmenter initialization skipped.")
+            return
+
         self.augmenter = ImageAugmenter(
             input_dir=Path(self.raw_data_dir),
             output_dir=Path(self.augmented_data_dir),
@@ -51,8 +55,13 @@ class BeerCapMatcherApp:
         download_u2net_model()
 
     def run_augmentation(self):
-        logger.info("Running augmentation pipeline...")
-        self.augmenter.augment_and_save()
+        if self.augmenter is None:
+            self._initialize_augmenter()
+        if self.augmenter:
+            logger.info("Running augmentation pipeline...")
+            self.augmenter.augment_and_save()
+        else:
+            logger.error("Cannot run augmentation. U2NET model is missing.")
 
     def run_embedding_generation(self):
         logger.info("Running embedding generation pipeline...")
@@ -128,7 +137,8 @@ if __name__ == "__main__":
     parser.add_argument("--repl", action="store_true", help="Run in interactive REPL mode")
     args = parser.parse_args()
 
-    app = BeerCapMatcherApp()
+    initialize_all = not args.download_bg_model
+    app = BeerCapMatcherApp(initialize_all=initialize_all)
 
     if args.download_bg_model:
         app.run_download_bg_model()
