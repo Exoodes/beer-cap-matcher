@@ -1,8 +1,14 @@
 import argparse
-from dotenv import load_dotenv
-from src.preprocessing.image_processor import ImageAugmenter
-from src.embeddings.embedding_generator import EmbeddingGenerator
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+from src.embeddings.embedding_generator import EmbeddingGenerator
+from src.indexer.index_loader import IndexLoader
+from src.preprocessing.image_processor import ImageAugmenter
+from src.scripts.download_u2net import download_u2net_model
+from src.similarity.image_querier import ImageQuerier
 
 load_dotenv()
 
@@ -10,12 +16,14 @@ load_dotenv()
 def run_augmentation():
     raw_data_dir = os.getenv("RAW_DATA_DIR")
     augmented_data_dir = os.getenv("AUGMENTED_DATA_DIR")
-    if raw_data_dir is None or augmented_data_dir is None:
-        raise ValueError("RAW_DATA_DIR and AUGMENTED_DATA_DIR environment variables must be set.")
+    u2net_model_path = os.getenv("U2NET_MODEL_PATH")
+    if raw_data_dir is None or augmented_data_dir is None or u2net_model_path is None:
+        raise ValueError("RAW_DATA_DIR, AUGMENTED_DATA_DIR, and U2NET_MODEL_PATH environment variables must be set.")
 
     augmenter = ImageAugmenter(
-        input_dir=raw_data_dir,
-        output_dir=augmented_data_dir,
+        input_dir=Path(raw_data_dir),
+        output_dir=Path(augmented_data_dir),
+        u2net_model_path=Path(u2net_model_path),
         augmentations_per_image=int(os.getenv("AUGMENTATIONS_PER_IMAGE", 20)),
     )
     augmenter.augment_and_save()
@@ -47,13 +55,42 @@ def run_indexing():
     builder.build_index()
 
 
+def run_query(image_path: str) -> None:
+    index_path = os.getenv("FAISS_INDEX_PATH")
+    metadata_path = os.getenv("FAISS_METADATA_PATH")
+    u2net_model_path = os.getenv("U2NET_MODEL_PATH")
+
+    if not index_path or not metadata_path or not u2net_model_path:
+        raise ValueError(
+            "FAISS_INDEX_PATH, FAISS_METADATA_PATH, and U2NET_MODEL_PATH environment variables must be set."
+        )
+
+    loader = IndexLoader(index_path, metadata_path)
+    loader.load()
+
+    querier = ImageQuerier(index=loader.index, metadata=loader.metadata, u2net_model_path=u2net_model_path)
+    results = querier.query(image_path=image_path)
+
+    print("Top Matches:")
+    for filename, score in results:
+        print(f"{filename} (Score: {score:.4f})")
+
+
+def run_download_bg_model():
+    download_u2net_model()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Beer cap matcher CLI.")
+    parser.add_argument("--download-bg-model", action="store_true", help="Download the U²-Net background removal model")
     parser.add_argument("--augment", action="store_true", help="Enable generation of augmented pictures")
     parser.add_argument("--generate-embeddings", action="store_true", help="Enable generation of embeddings")
     parser.add_argument("--index", action="store_true", help="Enable indexing of pictures")
-    parser.add_argument("--update", action="store_true", help="Enable updating of the index")
+    parser.add_argument("--query", type=str, help="Path to image for querying the index")
     args = parser.parse_args()
+
+    if args.download_bg_model:
+        run_download_bg_model()
 
     if args.augment:
         run_augmentation()
@@ -63,3 +100,6 @@ if __name__ == "__main__":
 
     if args.index:
         run_indexing()
+
+    if args.query:
+        run_query(args.query)
