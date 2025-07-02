@@ -84,12 +84,9 @@ def run_query(image_path: str) -> None:
     results = querier.query(image_path=image_path)
 
     print("Aggregated Top Matches:")
-    for result in results:
+    for r in results:
         print(
-            f"Original: {result['original_image']}, "
-            f"Count: {result['match_count']}, "
-            f"Mean Distance: {result['mean_distance']:.4f}, "
-            f"Min Distance: {result['min_distance']:.4f}"
+            f"{r.original_image}: mean={r.mean_distance:.4f}, min={r.min_distance:.4f}, max={r.max_distance:.4f}, count={r.match_count}"
         )
 
 
