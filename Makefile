@@ -1,17 +1,12 @@
 PYTHON=python
-RAW_DATA_DIR=data/images
-AUGMENTED_DATA_DIR=data/augmented
-EMBEDDINGS_PATH=models/embeddings.pkl
-INDEX_PATH=models/faiss.index
-METADATA_PATH=models/metadata.pkl
-MODEL_PATH=models/u2net.pth
 
 clean:
-	rm -rf $(AUGMENTED_DATA_DIR)/*
-	rm -f $(EMBEDDINGS_PATH)
-	rm -f $(INDEX_PATH)
-	rm -f $(METADATA_PATH)
-	@echo "🧹 Cleaned augmented images, embeddings, and index."
+	rm -rf data/augmented/*
+	rm -f models/embeddings.pkl
+	rm -f models/faiss.index
+	rm -f models/metadata.pkl
+	rm -f models/u2net.pth
+	@echo "🧹 Cleaned all generated files."
 
 setup:
 	$(PYTHON) -m src.main --download-bg-model
@@ -24,4 +19,7 @@ pipeline:
 query:
 	$(PYTHON) -m src.main --query $(IMAGE)
 
-.PHONY: clean setup pipeline query
+repl:
+	$(PYTHON) -m src.main --repl
+
+.PHONY: clean setup pipeline query repl
