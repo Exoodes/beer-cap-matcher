@@ -1,10 +1,10 @@
-# pyright: reportUnknownVariableType=false
-# pyright: reportUnknownMemberType=false
+# pyright: reportUnknownVariableType=false, reportUnknownMemberType=false, reportCallIssue=false
+# pyright: reportAttributeAccessIssue=false, reportUnknownArgumentType=false
 
-
+from src.constants import EMBEDDINGS_KEY, IMAGE_PATHS_KEY
 import os
 import pickle
-from typing import List, Tuple
+from typing import List
 
 import torch
 from PIL import Image
@@ -52,7 +52,7 @@ class EmbeddingGenerator:
     def save_embeddings(self, embeddings: List[torch.Tensor], filenames: List[str]) -> None:
         os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
 
-        data: Tuple[List[torch.Tensor], List[str]] = (embeddings, filenames)
+        data = {EMBEDDINGS_KEY: embeddings, IMAGE_PATHS_KEY: filenames}
         with open(self.output_path, "wb") as f:
             pickle.dump(data, f)
 

@@ -1,7 +1,10 @@
+# pyright: reportUnknownMemberType=false
+
 import faiss
 import pickle
 import numpy as np
 from src.utils.logger import get_logger
+from src.constants import EMBEDDINGS_KEY, IMAGE_PATHS_KEY
 
 logger = get_logger(__name__)
 
@@ -17,14 +20,14 @@ class IndexBuilder:
         with open(self.embedding_path, "rb") as f:
             data = pickle.load(f)
 
-        embeddings = np.array(data["embeddings"]).astype("float32")
-        metadata = data["paths"]
+        embeddings = np.array(data[EMBEDDINGS_KEY]).astype("float32")
+        metadata = data[IMAGE_PATHS_KEY]
 
         faiss.normalize_L2(embeddings)
 
         logger.info("Building FAISS index with %d vectors", len(embeddings))
         index = faiss.IndexFlatIP(embeddings.shape[1])
-        index.add(embeddings)
+        index.add(embeddings)  # pyright: ignore[reportCallIssue]
 
         logger.info("Saving index to %s", self.index_path)
         faiss.write_index(index, self.index_path)
