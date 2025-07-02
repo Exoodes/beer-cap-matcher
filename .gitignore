@@ -1,3 +1,7 @@
 .venv
 __pycache__
 data/augmented
+models/embeddings.pkl
+models/metadata.pkl
+models/faiss.index
+models/u2net.pth
