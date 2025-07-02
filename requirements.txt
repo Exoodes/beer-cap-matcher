@@ -2,6 +2,8 @@ albucore==0.0.24
 albumentations==2.0.8
 annotated-types==0.7.0
 clip @ git+https://github.com/openai/CLIP.git@dcba3cb2e2827b402d2701e7e1c7d9fed8a20ef1
+data-science-types==0.2.23
+faiss-cpu==1.11.0
 filelock==3.13.1
 fsspec==2024.6.1
 ftfy==6.3.1
