@@ -1,8 +1,9 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 albucore==0.0.24
 albumentations==2.0.8
 annotated-types==0.7.0
 clip @ git+https://github.com/openai/CLIP.git@dcba3cb2e2827b402d2701e7e1c7d9fed8a20ef1
-data-science-types==0.2.23
 faiss-cpu==1.11.0
 filelock==3.13.1
 fsspec==2024.6.1
@@ -25,9 +26,9 @@ setuptools==70.2.0
 simsimd==6.4.9
 stringzilla==3.12.5
 sympy==1.13.3
-torch==2.7.1+cpu
-torchaudio==2.7.1+cpu
-torchvision==0.22.1+cpu
+torch==2.7.1
+torchaudio==2.7.1
+torchvision==0.22.1
 tqdm==4.67.1
 typing-inspection==0.4.1
 typing_extensions==4.14.0
