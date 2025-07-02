@@ -17,13 +17,18 @@ def run_augmentation():
     raw_data_dir = os.getenv("RAW_DATA_DIR")
     augmented_data_dir = os.getenv("AUGMENTED_DATA_DIR")
     u2net_model_path = os.getenv("U2NET_MODEL_PATH")
-    if raw_data_dir is None or augmented_data_dir is None or u2net_model_path is None:
-        raise ValueError("RAW_DATA_DIR, AUGMENTED_DATA_DIR, and U2NET_MODEL_PATH environment variables must be set.")
+    augmentation_map_path = os.getenv("AUGMENTATION_MAP_PATH")
+
+    if raw_data_dir is None or augmented_data_dir is None or u2net_model_path is None or augmentation_map_path is None:
+        raise ValueError(
+            "RAW_DATA_DIR, AUGMENTED_DATA_DIR, U2NET_MODEL_PATH, and AUGMENTATION_MAP_PATH environment variables must be set."
+        )
 
     augmenter = ImageAugmenter(
         input_dir=Path(raw_data_dir),
         output_dir=Path(augmented_data_dir),
         u2net_model_path=Path(u2net_model_path),
+        augmentation_map_path=Path(augmentation_map_path),
         augmentations_per_image=int(os.getenv("AUGMENTATIONS_PER_IMAGE", 20)),
     )
     augmenter.augment_and_save()
@@ -59,21 +64,33 @@ def run_query(image_path: str) -> None:
     index_path = os.getenv("FAISS_INDEX_PATH")
     metadata_path = os.getenv("FAISS_METADATA_PATH")
     u2net_model_path = os.getenv("U2NET_MODEL_PATH")
+    augmentation_map_path = os.getenv("AUGMENTATION_MAP_PATH")
 
-    if not index_path or not metadata_path or not u2net_model_path:
+    if not index_path or not metadata_path or not u2net_model_path or not augmentation_map_path:
         raise ValueError(
-            "FAISS_INDEX_PATH, FAISS_METADATA_PATH, and U2NET_MODEL_PATH environment variables must be set."
+            "FAISS_INDEX_PATH, FAISS_METADATA_PATH, U2NET_MODEL_PATH, and AUGMENTATION_MAP_PATH environment variables must be set."
         )
 
     loader = IndexLoader(index_path, metadata_path)
     loader.load()
 
-    querier = ImageQuerier(index=loader.index, metadata=loader.metadata, u2net_model_path=u2net_model_path)
+    querier = ImageQuerier(
+        index=loader.index,
+        metadata=loader.metadata,
+        u2net_model_path=u2net_model_path,
+        augmentation_map_path=augmentation_map_path,
+    )
+
     results = querier.query(image_path=image_path)
 
-    print("Top Matches:")
-    for filename, score in results:
-        print(f"{filename} (Score: {score:.4f})")
+    print("Aggregated Top Matches:")
+    for result in results:
+        print(
+            f"Original: {result['original_image']}, "
+            f"Count: {result['match_count']}, "
+            f"Mean Distance: {result['mean_distance']:.4f}, "
+            f"Min Distance: {result['min_distance']:.4f}"
+        )
 
 
 def run_download_bg_model():
