@@ -1,119 +1,144 @@
 import argparse
 import os
 from pathlib import Path
+from typing import List, Optional
 
 from dotenv import load_dotenv
 
 from src.embeddings.embedding_generator import EmbeddingGenerator
+from src.indexer.index_builder import IndexBuilder
 from src.indexer.index_loader import IndexLoader
 from src.preprocessing.image_processor import ImageAugmenter
 from src.scripts.download_u2net import download_u2net_model
-from src.similarity.image_querier import ImageQuerier
+from src.similarity.image_querier import AggregatedResult, ImageQuerier
+from src.utils.logger import get_logger
 
 load_dotenv()
+logger = get_logger(__name__)
 
 
-def run_augmentation():
-    raw_data_dir = os.getenv("RAW_DATA_DIR")
-    augmented_data_dir = os.getenv("AUGMENTED_DATA_DIR")
-    u2net_model_path = os.getenv("U2NET_MODEL_PATH")
-    augmentation_map_path = os.getenv("AUGMENTATION_MAP_PATH")
+class BeerCapMatcherApp:
+    def __init__(self):
+        logger.info("Initializing BeerCapMatcherApp...")
 
-    if raw_data_dir is None or augmented_data_dir is None or u2net_model_path is None or augmentation_map_path is None:
-        raise ValueError(
-            "RAW_DATA_DIR, AUGMENTED_DATA_DIR, U2NET_MODEL_PATH, and AUGMENTATION_MAP_PATH environment variables must be set."
+        # Load environment variables
+        self.raw_data_dir = os.getenv("RAW_DATA_DIR")
+        self.augmented_data_dir = os.getenv("AUGMENTED_DATA_DIR")
+        self.u2net_model_path = os.getenv("U2NET_MODEL_PATH")
+        self.augmentation_map_path = os.getenv("AUGMENTATION_MAP_PATH")
+        self.embeddings_output_path = os.getenv("EMBEDDINGS_OUTPUT_PATH")
+        self.faiss_index_path = os.getenv("FAISS_INDEX_PATH")
+        self.faiss_metadata_path = os.getenv("FAISS_METADATA_PATH")
+        self.augmentations_per_image = int(os.getenv("AUGMENTATIONS_PER_IMAGE", 20))
+
+        self.augmenter: Optional[ImageAugmenter] = None
+        self.embedding_generator: Optional[EmbeddingGenerator] = None
+        self.index_loader: Optional[IndexLoader] = None
+        self.querier: Optional[ImageQuerier] = None
+
+        self._initialize_augmenter()
+
+    def _initialize_augmenter(self):
+        self.augmenter = ImageAugmenter(
+            input_dir=Path(self.raw_data_dir),
+            output_dir=Path(self.augmented_data_dir),
+            u2net_model_path=Path(self.u2net_model_path),
+            augmentation_map_path=Path(self.augmentation_map_path),
+            augmentations_per_image=self.augmentations_per_image,
         )
 
-    augmenter = ImageAugmenter(
-        input_dir=Path(raw_data_dir),
-        output_dir=Path(augmented_data_dir),
-        u2net_model_path=Path(u2net_model_path),
-        augmentation_map_path=Path(augmentation_map_path),
-        augmentations_per_image=int(os.getenv("AUGMENTATIONS_PER_IMAGE", 20)),
-    )
-    augmenter.augment_and_save()
+    def run_download_bg_model(self):
+        download_u2net_model()
 
+    def run_augmentation(self):
+        logger.info("Running augmentation pipeline...")
+        self.augmenter.augment_and_save()
 
-def run_embedding_generation():
-    image_dir = os.getenv("AUGMENTED_DATA_DIR")
-    output_path = os.getenv("EMBEDDINGS_OUTPUT_PATH")
-    if image_dir is None or output_path is None:
-        raise ValueError("AUGMENTED_DATA_DIR and EMBEDDINGS_OUTPUT_PATH environment variables must be set.")
-
-    generator = EmbeddingGenerator(image_dir=image_dir, output_path=output_path)
-    generator.generate_embeddings()
-
-
-def run_indexing():
-    from src.indexer.index_builder import IndexBuilder
-
-    embedding_path = os.getenv("EMBEDDINGS_OUTPUT_PATH")
-    index_path = os.getenv("FAISS_INDEX_PATH")
-    metadata_path = os.getenv("FAISS_METADATA_PATH")
-
-    if embedding_path is None or index_path is None or metadata_path is None:
-        raise ValueError(
-            "EMBEDDINGS_OUTPUT_PATH, FAISS_INDEX_PATH, and FAISS_METADATA_PATH environment variables must be set."
+    def run_embedding_generation(self):
+        logger.info("Running embedding generation pipeline...")
+        self.embedding_generator = EmbeddingGenerator(
+            image_dir=self.augmented_data_dir,
+            output_path=self.embeddings_output_path,
         )
+        self.embedding_generator.generate_embeddings()
 
-    builder = IndexBuilder(embedding_path, index_path, metadata_path)
-    builder.build_index()
-
-
-def run_query(image_path: str) -> None:
-    index_path = os.getenv("FAISS_INDEX_PATH")
-    metadata_path = os.getenv("FAISS_METADATA_PATH")
-    u2net_model_path = os.getenv("U2NET_MODEL_PATH")
-    augmentation_map_path = os.getenv("AUGMENTATION_MAP_PATH")
-
-    if not index_path or not metadata_path or not u2net_model_path or not augmentation_map_path:
-        raise ValueError(
-            "FAISS_INDEX_PATH, FAISS_METADATA_PATH, U2NET_MODEL_PATH, and AUGMENTATION_MAP_PATH environment variables must be set."
+    def run_indexing(self):
+        logger.info("Running index building pipeline...")
+        builder = IndexBuilder(
+            embedding_path=self.embeddings_output_path,
+            index_path=self.faiss_index_path,
+            metadata_path=self.faiss_metadata_path,
         )
+        builder.build_index()
 
-    loader = IndexLoader(index_path, metadata_path)
-    loader.load()
+    def run_query(self, image_path: str, top_k: int = 5):
+        logger.info(f"Running query for image: {image_path}")
 
-    querier = ImageQuerier(
-        index=loader.index,
-        metadata=loader.metadata,
-        u2net_model_path=u2net_model_path,
-        augmentation_map_path=augmentation_map_path,
-    )
+        if self.index_loader is None:
+            self.index_loader = IndexLoader(self.faiss_index_path, self.faiss_metadata_path)
+            self.index_loader.load()
 
-    results = querier.query(image_path=image_path)
+        if self.querier is None:
+            self.querier = ImageQuerier(
+                index=self.index_loader.index,
+                metadata=self.index_loader.metadata,
+                u2net_model_path=self.u2net_model_path,
+                augmentation_map_path=self.augmentation_map_path,
+            )
 
-    print("Aggregated Top Matches:")
-    for r in results:
-        print(
-            f"{r.original_image}: mean={r.mean_distance:.4f}, min={r.min_distance:.4f}, max={r.max_distance:.4f}, count={r.match_count}"
-        )
+        results: List[AggregatedResult] = self.querier.query(image_path=image_path, top_k=top_k)
+        self._print_results(results)
 
+    def _print_results(self, results: List[AggregatedResult]):
+        print("Aggregated Top Matches:")
+        for r in results:
+            print(
+                f"{r.original_image}: mean={r.mean_distance:.4f}, "
+                f"min={r.min_distance:.4f}, max={r.max_distance:.4f}, count={r.match_count}"
+            )
 
-def run_download_bg_model():
-    download_u2net_model()
+    def repl(self):
+        logger.info("Entering REPL mode. Type 'help' for commands.")
+        while True:
+            cmd = input("BeerCapMatcher> ").strip()
+            if cmd in ["exit", "quit"]:
+                break
+            elif cmd == "help":
+                print("Commands: augment, generate_embeddings, index, query <image_path>, exit")
+            elif cmd == "augment":
+                self.run_augmentation()
+            elif cmd == "generate_embeddings":
+                self.run_embedding_generation()
+            elif cmd == "index":
+                self.run_indexing()
+            elif cmd.startswith("query "):
+                _, path = cmd.split(" ", 1)
+                self.run_query(path)
+            else:
+                print("Unknown command. Type 'help'.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Beer cap matcher CLI.")
     parser.add_argument("--download-bg-model", action="store_true", help="Download the U²-Net background removal model")
-    parser.add_argument("--augment", action="store_true", help="Enable generation of augmented pictures")
-    parser.add_argument("--generate-embeddings", action="store_true", help="Enable generation of embeddings")
-    parser.add_argument("--index", action="store_true", help="Enable indexing of pictures")
+    parser.add_argument("--augment", action="store_true", help="Generate augmented images")
+    parser.add_argument("--generate-embeddings", action="store_true", help="Generate image embeddings")
+    parser.add_argument("--index", action="store_true", help="Build the FAISS index")
     parser.add_argument("--query", type=str, help="Path to image for querying the index")
+    parser.add_argument("--repl", action="store_true", help="Run in interactive REPL mode")
     args = parser.parse_args()
 
+    app = BeerCapMatcherApp()
+
     if args.download_bg_model:
-        run_download_bg_model()
-
+        app.run_download_bg_model()
     if args.augment:
-        run_augmentation()
-
+        app.run_augmentation()
     if args.generate_embeddings:
-        run_embedding_generation()
-
+        app.run_embedding_generation()
     if args.index:
-        run_indexing()
-
+        app.run_indexing()
     if args.query:
-        run_query(args.query)
+        app.run_query(args.query)
+    if args.repl:
+        app.repl()
