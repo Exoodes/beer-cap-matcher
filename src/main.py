@@ -97,6 +97,7 @@ class BeerCapMatcherApp:
 
         results: List[AggregatedResult] = self.querier.query(image_path=image_path, top_k=top_k)
         self._print_results(results)
+        return results
 
     def _print_results(self, results: List[AggregatedResult]):
         print("Aggregated Top Matches:")
