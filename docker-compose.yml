@@ -6,9 +6,9 @@ services:
     container_name: beercap_postgres
     restart: always
     environment:
-      POSTGRES_USER: beeruser
-      POSTGRES_PASSWORD: beerpass
-      POSTGRES_DB: beerdb
+      POSTGRES_USER: beercap_user_postgres
+      POSTGRES_PASSWORD: beercap_pass_postgres
+      POSTGRES_DB: beercap_db_postgres
     ports:
       - "5432:5432"
     volumes:
