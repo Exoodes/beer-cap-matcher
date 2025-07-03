@@ -1,0 +1,41 @@
+from typing import List, Optional
+
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from src.models.augmented_cap import AugmentedCap
+from src.models.beer import Beer
+from src.models.beer_cap import BeerCap
+
+
+async def create_beer_cap(session: AsyncSession, beer_id: int, s3_key: str) -> BeerCap:
+    new_cap = BeerCap(beer_id=beer_id, s3_key=s3_key)
+    session.add(new_cap)
+    await session.commit()
+    await session.refresh(new_cap)
+    return new_cap
+
+
+async def get_beer_cap(session: AsyncSession, beer_cap_id: int) -> Optional[BeerCap]:
+    result = await session.execute(
+        select(BeerCap).where(BeerCap.id == beer_cap_id).options(selectinload(BeerCap.augmented_caps))
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_all_beer_caps(session: AsyncSession) -> List[BeerCap]:
+    result = await session.execute(select(BeerCap).options(selectinload(BeerCap.augmented_caps)))
+    return result.scalars().all()
+
+
+async def delete_beer_cap(session: AsyncSession, beer_cap_id: int) -> None:
+    cap = await get_beer_cap(session, beer_cap_id)
+    if not cap:
+        return
+
+    for aug in cap.augmented_caps:
+        await session.delete(aug)
+
+    await session.delete(cap)
+    await session.commit()
