@@ -14,8 +14,8 @@ class BeerCap(Base):
 
     beer_id = Column(Integer, ForeignKey("beers.id"), nullable=False)
 
-    # Relationship
     beer = relationship("Beer", backref="caps")
+    augmented_caps = relationship("AugmentedCap", back_populates="beer_cap")
 
     def __repr__(self):
         return f"<BeerCap id={self.id} variant={self.variant_name} beer_id={self.beer_id}>"

@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Float, ForeignKey, Integer, String
+from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from src.database import Base
+from src.models import Base
 
 
 class AugmentedCap(Base):
@@ -13,3 +13,6 @@ class AugmentedCap(Base):
     embedding_vector = Column(String, nullable=True)
 
     beer_cap = relationship("BeerCap", back_populates="augmented_caps")
+
+    def __repr__(self):
+        return f"<AugmentedCap id={self.id} beer_cap_id={self.beer_cap_id}>"
