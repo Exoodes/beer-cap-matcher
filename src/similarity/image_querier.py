@@ -47,9 +47,6 @@ class ImageQuerier:
             aug: original for original, aug_list in self.augmentation_map.items() for aug in aug_list
         }
 
-        for original in self.augmentation_map.keys():
-            self.reverse_map[original] = original
-
     def query(self, image_path: str, top_k: int = 5, faiss_k: int = 10000) -> List[AggregatedResult]:
         logger.info("Querying image: %s", image_path)
 
@@ -71,6 +68,7 @@ class ImageQuerier:
         return image_tensor
 
     def _query_embedding(self, image_tensor: torch.Tensor, top_k: int) -> List[Tuple[str, float]]:
+        top_k = min(top_k, self.index.ntotal)
         with torch.no_grad():
             embedding = self.model.encode_image(image_tensor).cpu().numpy()
             faiss.normalize_L2(embedding)
