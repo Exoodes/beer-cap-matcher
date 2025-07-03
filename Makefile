@@ -26,4 +26,15 @@ repl:
 api:
 	uvicorn run_api:app --reload --host 0.0.0.0 --port 8000
 
+setup-postgres:
+	python -m src.scripts.create_tables
+	@echo "✅ PostgreSQL tables ensured."
+
+setup-minio:
+	python -m src.scripts.setup_minio
+	@echo "✅ MinIO buckets ensured."
+
+setup-all: setup-postgres setup-minio
+	@echo "🎉 All services set up successfully."
+
 .PHONY: clean setup pipeline query repl
