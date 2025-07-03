@@ -6,6 +6,7 @@ clean:
 	rm -f models/faiss.index
 	rm -f models/metadata.pkl
 	rm -f models/u2net.pth
+	rm -f models/augmentation_map.json
 	@echo "🧹 Cleaned all generated files."
 
 setup:
@@ -21,5 +22,8 @@ query:
 
 repl:
 	$(PYTHON) -m src.main --repl
+
+api:
+	uvicorn run_api:app --reload --host 0.0.0.0 --port 8000
 
 .PHONY: clean setup pipeline query repl
