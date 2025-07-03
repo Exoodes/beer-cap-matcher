@@ -5,3 +5,4 @@ models/embeddings.pkl
 models/metadata.pkl
 models/faiss.index
 models/u2net.pth
+models/augmentation_map.json
