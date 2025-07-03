@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: beercap_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: beeruser
+      POSTGRES_PASSWORD: beerpass
+      POSTGRES_DB: beerdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio
+    container_name: beercap_minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"  # API port
+      - "9001:9001"  # Console UI
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - miniodata:/data
+
+volumes:
+  pgdata:
+  miniodata:
