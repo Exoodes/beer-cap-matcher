@@ -74,7 +74,7 @@ class BeerCapFacade:
             return None
 
         for aug in beer_cap.augmented_caps:
-            self.minio_wrapper.delete_file(self.augmented_caps_bucket, aug.filename)
+            self.minio_wrapper.delete_file(self.augmented_caps_bucket, aug.s3_key)
             await session.delete(aug)
 
         return beer_cap
@@ -85,7 +85,7 @@ class BeerCapFacade:
             if not beer_cap:
                 return
 
-            self.minio_wrapper.delete_file(self.original_caps_bucket, beer_cap.filename)
+            self.minio_wrapper.delete_file(self.original_caps_bucket, beer_cap.s3_key)
             await session.delete(beer_cap)
 
     async def delete_augmented_caps(self, beer_cap_id: int) -> None:
@@ -110,7 +110,7 @@ class BeerCapFacade:
                 self.augmented_caps_bucket, object_name, image_data, image_length, content_type
             )
 
-            aug_cap = create_augmented_cap(session, beer_cap_id, object_name)
+            aug_cap = await create_augmented_cap(session, beer_cap_id, object_name)
 
             return aug_cap
 
