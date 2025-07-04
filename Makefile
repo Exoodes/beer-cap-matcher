@@ -37,4 +37,9 @@ setup-minio:
 setup-all: setup-postgres setup-minio
 	@echo "🎉 All services set up successfully."
 
+restart-docker:
+	docker-compose down -v
+	docker-compose up -d
+	@echo "🔄 Docker services restarted."
+
 .PHONY: clean setup pipeline query repl api setup-postgres setup-minio setup-all
