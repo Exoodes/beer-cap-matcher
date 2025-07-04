@@ -1,4 +1,4 @@
-from src.minio_client import minio_client
+from src.s3.minio_client import minio_client
 
 
 async def ensure_buckets_exist():
