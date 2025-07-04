@@ -1,6 +1,14 @@
 import os
+from datetime import timedelta
+from typing import BinaryIO
 
 from minio import Minio
+from minio.error import S3Error
+
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
@@ -15,23 +23,50 @@ minio_client = Minio(
 )
 
 
-def upload_bytes(bucket_name: str, object_name: str, data: bytes, content_type: str = "image/png"):
-    minio_client.put_object(
-        bucket_name=bucket_name,
-        object_name=object_name,
-        data=data,
-        length=len(data),
-        content_type=content_type,
-    )
+def upload_file(
+    bucket_name: str, object_name: str, data: BinaryIO, length: int, content_type: str = "image/png"
+) -> str:
+    try:
+        minio_client.put_object(
+            bucket_name=bucket_name, object_name=object_name, data=data, length=length, content_type=content_type
+        )
+        logger.info(f"Uploaded {object_name} to {bucket_name} (file-like object).")
+        return object_name
+    except S3Error as e:
+        logger.error(f"Failed to upload {object_name} to {bucket_name}: {e}")
+        raise
+
+
+def delete_file(bucket_name: str, object_name: str) -> None:
+    try:
+        minio_client.remove_object(bucket_name, object_name)
+        logger.info(f"Deleted {object_name} from {bucket_name}.")
+    except S3Error as e:
+        logger.error(f"Failed to delete {object_name} from {bucket_name}: {e}")
+        raise
 
 
 def download_bytes(bucket_name: str, object_name: str) -> bytes:
-    response = minio_client.get_object(bucket_name, object_name)
-    data = response.read()
-    response.close()
-    response.release_conn()
-    return data
+    response = None
+    try:
+        response = minio_client.get_object(bucket_name, object_name)
+        data = response.read()
+        logger.info(f"Downloaded {object_name} from {bucket_name}.")
+        return data
+    except S3Error as e:
+        logger.error(f"Failed to download {object_name} from {bucket_name}: {e}")
+        raise
+    finally:
+        if response:
+            response.close()
+            response.release_conn()
 
 
-def generate_presigned_url(bucket_name: str, object_name: str, expires=3600) -> str:
-    return minio_client.presigned_get_object(bucket_name, object_name, expires=expires)
+def generate_presigned_url(bucket_name: str, object_name: str, expiry_seconds=3600) -> str:
+    try:
+        url = minio_client.presigned_get_object(bucket_name, object_name, expires=timedelta(seconds=expiry_seconds))
+        logger.info(f"Generated presigned URL for {object_name} in {bucket_name}.")
+        return url
+    except S3Error as e:
+        logger.error(f"Failed to generate presigned URL for {object_name} in {bucket_name}: {e}")
+        raise
