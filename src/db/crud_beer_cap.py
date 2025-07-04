@@ -34,11 +34,6 @@ async def get_all_beer_caps(session: AsyncSession) -> List[BeerCap]:
 
 async def delete_beer_cap(session: AsyncSession, beer_cap_id: int) -> None:
     cap = await get_beer_cap_by_id(session, beer_cap_id)
-    if not cap:
-        return
-
-    for aug in cap.augmented_caps:
-        await session.delete(aug)
-
-    await session.delete(cap)
-    await session.commit()
+    if cap:
+        await session.delete(cap)
+        await session.commit()
