@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship
 
 from src.models import Base
 
@@ -8,9 +9,8 @@ class Beer(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
-    brewery = Column(String(255), nullable=True)
-    style = Column(String(100), nullable=True)
-    description = Column(Text, nullable=True)
+
+    caps = relationship("BeerCap", back_populates="beer")
 
     def __repr__(self):
         return f"<Beer id={self.id} name={self.name}>"
