@@ -1,0 +1,121 @@
+import os
+from typing import BinaryIO, Optional
+
+from dotenv import load_dotenv
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.database import async_session
+from src.db.crud_augmented_cap import create_augmented_cap
+from src.db.crud_beer import create_beer, get_beer_by_id
+from src.db.crud_beer_cap import create_beer_cap, get_beer_cap_by_id
+from src.models.augmented_cap import AugmentedCap
+from src.models.beer import Beer
+from src.models.beer_cap import BeerCap
+from src.s3.minio_client import MinioClientWrapper
+from src.schemas.augmented_cap_schema import AugmentedCapCreateSchema
+from src.schemas.beer_cap_schema import BeerCapCreateSchema
+
+load_dotenv()
+
+
+class BeerCapFacade:
+    def __init__(self, minio_wrapper: MinioClientWrapper):
+        self.minio_wrapper = minio_wrapper
+
+        self.original_caps_bucket = os.getenv("MINIO_ORIGINAL_CAPS_BUCKET")
+        self.augmented_caps_bucket = os.getenv("MINIO_AUGMENTED_CAPS_BUCKET")
+
+        if not self.original_caps_bucket or not self.augmented_caps_bucket:
+            raise ValueError("MINIO_ORIGINAL_CAPS_BUCKET and MINIO_AUGMENTED_CAPS_BUCKET must be set in .env")
+
+    async def create_beer_with_cap_and_upload(
+        self,
+        beer_name: str,
+        cap_metadata: BeerCapCreateSchema,
+        image_data: BinaryIO,
+        image_length: int,
+        content_type: str = "image/png",
+    ) -> BeerCap:
+        async with async_session() as session:
+            beer = await create_beer(session, beer_name, False)
+
+            object_name = f"{cap_metadata.filename}"
+            self.minio_wrapper.upload_file(
+                self.original_caps_bucket, object_name, image_data, image_length, content_type
+            )
+
+            beer_cap = await create_beer_cap(session, beer.id, object_name)
+            return beer_cap
+
+    async def create_cap_for_existing_beer_and_upload(
+        self,
+        beer_id: int,
+        cap_metadata: BeerCapCreateSchema,
+        image_data: BinaryIO,
+        image_length: int,
+        content_type: str = "image/png",
+    ) -> Optional[BeerCap]:
+        async with async_session() as session:
+            beer = await get_beer_by_id(session, beer_id)
+            if not beer:
+                return None
+
+            object_name = f"{cap_metadata.filename}"
+            self.minio_wrapper.upload_file(
+                self.original_caps_bucket, object_name, image_data, image_length, content_type
+            )
+
+            beer_cap = await create_beer_cap(session, beer.id, object_name)
+            return beer_cap
+
+    async def _delete_augmented_caps_helper(self, session: AsyncSession, beer_cap_id: int) -> Optional[BeerCap]:
+        beer_cap = await get_beer_cap_by_id(session, beer_cap_id)
+        if not beer_cap:
+            return None
+
+        for aug in beer_cap.augmented_caps:
+            self.minio_wrapper.delete_file(self.augmented_caps_bucket, aug.filename)
+            await session.delete(aug)
+
+        return beer_cap
+
+    async def delete_beer_cap_and_its_augmented_caps(self, beer_cap_id: int) -> None:
+        async with async_session() as session:
+            beer_cap = await self._delete_augmented_caps_helper(session, beer_cap_id)
+            if not beer_cap:
+                return
+
+            self.minio_wrapper.delete_file(self.original_caps_bucket, beer_cap.filename)
+            await session.delete(beer_cap)
+
+    async def delete_augmented_caps(self, beer_cap_id: int) -> None:
+        async with async_session() as session:
+            await self._delete_augmented_caps_helper(session, beer_cap_id)
+
+    async def add_augmented_cap_and_upload(
+        self,
+        beer_cap_id: int,
+        aug_metadata: AugmentedCapCreateSchema,
+        image_data: BinaryIO,
+        image_length: int,
+        content_type: str = "image/png",
+    ) -> Optional[AugmentedCap]:
+        async with async_session() as session:
+            beer_cap = await get_beer_cap_by_id(session, beer_cap_id)
+            if not beer_cap:
+                return None
+
+            object_name = f"{aug_metadata.filename}"
+            self.minio_wrapper.upload_file(
+                self.augmented_caps_bucket, object_name, image_data, image_length, content_type
+            )
+
+            aug_cap = create_augmented_cap(session, beer_cap_id, object_name)
+
+            return aug_cap
+
+    def get_presigned_url_for_cap(self, filename: str, is_augmented: bool = False) -> str:
+        object_name = f"{filename}"
+        bucket_name = self.augmented_caps_bucket if is_augmented else self.original_caps_bucket
+
+        return self.minio_wrapper.generate_presigned_url(bucket_name, object_name)
