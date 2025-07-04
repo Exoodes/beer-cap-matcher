@@ -1,11 +1,9 @@
 from typing import List, Optional
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.models.augmented_cap import AugmentedCap
-from src.models.beer import Beer
 from src.models.beer_cap import BeerCap
 
 
@@ -17,7 +15,7 @@ async def create_beer_cap(session: AsyncSession, beer_id: int, s3_key: str) -> B
     return new_cap
 
 
-async def get_beer_cap(session: AsyncSession, beer_cap_id: int) -> Optional[BeerCap]:
+async def get_beer_cap_by_id(session: AsyncSession, beer_cap_id: int) -> Optional[BeerCap]:
     result = await session.execute(
         select(BeerCap).where(BeerCap.id == beer_cap_id).options(selectinload(BeerCap.augmented_caps))
     )
@@ -30,7 +28,7 @@ async def get_all_beer_caps(session: AsyncSession) -> List[BeerCap]:
 
 
 async def delete_beer_cap(session: AsyncSession, beer_cap_id: int) -> None:
-    cap = await get_beer_cap(session, beer_cap_id)
+    cap = await get_beer_cap_by_id(session, beer_cap_id)
     if not cap:
         return
 
