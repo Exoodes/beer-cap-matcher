@@ -7,10 +7,15 @@ from sqlalchemy.orm import selectinload
 from src.models.beer_cap import BeerCap
 
 
-async def create_beer_cap(session: AsyncSession, beer_id: int, s3_key: str) -> BeerCap:
+async def create_beer_cap(session: AsyncSession, beer_id: int, s3_key: str, commit: bool = True) -> BeerCap:
     new_cap = BeerCap(beer_id=beer_id, s3_key=s3_key)
     session.add(new_cap)
-    await session.commit()
+
+    if commit:
+        await session.commit()
+    else:
+        await session.flush()
+
     await session.refresh(new_cap)
     return new_cap
 
