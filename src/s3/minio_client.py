@@ -1,6 +1,8 @@
+# src/s3/minio_client.py
+
 import os
 from datetime import timedelta
-from typing import BinaryIO
+from typing import BinaryIO, Optional
 
 from minio import Minio
 from minio.error import S3Error
@@ -11,11 +13,17 @@ logger = get_logger(__name__)
 
 
 class MinioClientWrapper:
-    def __init__(self):
-        MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
-        MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-        MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
-        MINIO_SECURE = os.getenv("MINIO_SECURE", "false").lower() == "true"
+    def __init__(
+        self,
+        endpoint: Optional[str] = None,
+        access_key: Optional[str] = None,
+        secret_key: Optional[str] = None,
+        secure: Optional[bool] = None,
+    ):
+        MINIO_ENDPOINT = endpoint if endpoint is not None else os.getenv("MINIO_ENDPOINT", "localhost:9000")
+        MINIO_ACCESS_KEY = access_key if access_key is not None else os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+        MINIO_SECRET_KEY = secret_key if secret_key is not None else os.getenv("MINIO_SECRET_KEY", "minioadmin")
+        MINIO_SECURE = secure if secure is not None else (os.getenv("MINIO_SECURE", "false").lower() == "true")
 
         self.client = Minio(
             MINIO_ENDPOINT,
