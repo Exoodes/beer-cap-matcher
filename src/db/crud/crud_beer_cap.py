@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.models.beer_cap import BeerCap
+from src.db.entities.beer_cap import BeerCap
 
 
 async def create_beer_cap(session: AsyncSession, beer_id: int, s3_key: str, commit: bool = True) -> BeerCap:

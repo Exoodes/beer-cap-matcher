@@ -1,5 +1,3 @@
-# src/s3/minio_client.py
-
 import os
 from datetime import timedelta
 from typing import BinaryIO, Optional

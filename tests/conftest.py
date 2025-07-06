@@ -11,9 +11,9 @@ from dotenv import load_dotenv
 from pytest_asyncio import fixture as async_fixture
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database import get_db_resources
-from src.models import Base
-from src.s3.minio_client import MinioClientWrapper
+from src.db.database import get_db_resources
+from src.db.entities import Base
+from src.storage.minio_client import MinioClientWrapper
 
 load_dotenv()
 

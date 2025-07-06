@@ -1,10 +1,12 @@
 # pyright: reportUnknownMemberType=false
 
-import faiss
 import pickle
+
+import faiss
 import numpy as np
+
+from src.utils.constants import EMBEDDINGS_KEY, IMAGE_PATHS_KEY
 from src.utils.logger import get_logger
-from src.constants import EMBEDDINGS_KEY, IMAGE_PATHS_KEY
 
 logger = get_logger(__name__)
 

@@ -6,8 +6,8 @@ import torch
 from PIL import Image
 from tqdm import tqdm
 
-from src.constants import EMBEDDINGS_KEY, IMAGE_PATHS_KEY
 from src.embeddings.model_loader import load_model_and_preprocess
+from src.utils.constants import EMBEDDINGS_KEY, IMAGE_PATHS_KEY
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)

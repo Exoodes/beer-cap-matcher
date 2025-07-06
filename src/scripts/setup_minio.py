@@ -1,6 +1,6 @@
 import asyncio
 
-from src.s3.minio_client import MinioClientWrapper
+from src.storage.minio_client import MinioClientWrapper
 
 
 async def ensure_buckets_exist():

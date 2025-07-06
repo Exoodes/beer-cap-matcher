@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 
-from src.models import Base
+from src.db.entities import Base
 
 
 class Beer(Base):

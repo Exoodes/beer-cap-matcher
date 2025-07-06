@@ -1,15 +1,15 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.crud_augmented_cap import (
+from src.db.crud.crud_augmented_cap import (
     create_augmented_cap,
     delete_augmented_cap,
     get_all_augmented_caps,
     get_augmented_cap_by_id,
 )
-from src.db.crud_beer import create_beer
-from src.db.crud_beer_cap import create_beer_cap
-from src.models.augmented_cap import AugmentedCap
+from src.db.crud.crud_beer import create_beer
+from src.db.crud.crud_beer_cap import create_beer_cap
+from src.db.entities.augmented_cap import AugmentedCap
 
 
 @pytest.mark.asyncio

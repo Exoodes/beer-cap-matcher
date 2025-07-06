@@ -3,7 +3,7 @@ from typing import List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.augmented_cap import AugmentedCap
+from src.db.entities.augmented_cap import AugmentedCap
 
 
 async def create_augmented_cap(session: AsyncSession, beer_cap_id: int, s3_key: str) -> AugmentedCap:

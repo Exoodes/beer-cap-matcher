@@ -3,7 +3,7 @@ import io
 import pytest
 from minio.error import S3Error
 
-from src.s3.minio_client import MinioClientWrapper
+from src.storage.minio_client import MinioClientWrapper
 from tests.conftest import TEST_BUCKET_NAME, TEST_IMAGE_CONTENT_TYPE, TEST_MINIO_ENDPOINT
 
 

@@ -3,7 +3,7 @@ from typing import List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.beer import Beer
+from src.db.entities.beer import Beer
 
 
 async def create_beer(session: AsyncSession, name: str, commit: bool = True) -> Beer:

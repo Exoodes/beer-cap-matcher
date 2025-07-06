@@ -1,10 +1,10 @@
 import asyncio
 
-import src.models.augmented_cap as _
-import src.models.beer as _
-import src.models.beer_cap as _
-from src.database import engine
-from src.models import Base
+import src.db.entities.augmented_cap as _
+import src.db.entities.beer as _
+import src.db.entities.beer_cap as _
+from src.db.database import engine
+from src.db.entities import Base
 
 
 async def init_models():
