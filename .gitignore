@@ -1,8 +1,8 @@
 .venv
 __pycache__
 data/augmented
-models/embeddings.pkl
-models/metadata.pkl
-models/faiss.index
-models/u2net.pth
-models/augmentation_map.json
+data/models/embeddings.pkl
+data/models/metadata.pkl
+data/models/faiss.index
+data/models/u2net.pth
+data/models/augmentation_map.json
