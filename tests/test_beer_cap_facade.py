@@ -5,9 +5,9 @@ from unittest.mock import MagicMock
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.crud.crud_augmented_cap import get_all_augmented_caps, get_augmented_cap_by_id
-from src.db.crud.crud_beer import get_beer_by_id
-from src.db.crud.crud_beer_cap import get_beer_cap_by_id
+from src.db.crud.augmented_cap import get_all_augmented_caps, get_augmented_cap_by_id
+from src.db.crud.beer import get_beer_by_id
+from src.db.crud.beer_cap import get_beer_cap_by_id
 from src.facades.beer_cap_facade import BeerCapFacade
 from src.schemas.augmented_cap_schema import AugmentedCapCreateSchema
 from src.schemas.beer_cap_schema import BeerCapCreateSchema

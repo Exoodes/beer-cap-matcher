@@ -4,9 +4,9 @@ from typing import Awaitable, BinaryIO, Callable, Optional
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.crud.crud_augmented_cap import create_augmented_cap
-from src.db.crud.crud_beer import create_beer, get_beer_by_id
-from src.db.crud.crud_beer_cap import create_beer_cap, get_beer_cap_by_id
+from src.db.crud.augmented_cap import create_augmented_cap
+from src.db.crud.beer import create_beer, get_beer_by_id
+from src.db.crud.beer_cap import create_beer_cap, get_beer_cap_by_id
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
 from src.db.entities.augmented_cap import AugmentedCap
 from src.db.entities.beer import Beer
