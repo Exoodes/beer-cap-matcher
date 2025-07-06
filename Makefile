@@ -42,4 +42,9 @@ restart-docker:
 	docker-compose up -d
 	@echo "🔄 Docker services restarted."
 
+restart-test-docker:
+	docker-compose -f docker-compose.test.yml down -v
+	docker-compose -f docker-compose.test.yml up -d
+	@echo "🔄 Test Docker services restarted."
+
 .PHONY: clean setup pipeline query repl api setup-postgres setup-minio setup-all
