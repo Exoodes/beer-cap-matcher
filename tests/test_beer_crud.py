@@ -25,7 +25,7 @@ class TestBeerCRUD:
         await create_beer(db_session, "Beer One")
         await create_beer(db_session, "Beer Two")
         beers = await get_all_beers(db_session)
-        assert len(beers) == 2  # With function scope truncate, this should be exact
+        assert len(beers) == 2
         names = [beer.name for beer in beers]
         assert "Beer One" in names
         assert "Beer Two" in names
@@ -38,9 +38,7 @@ class TestBeerCRUD:
         assert deleted_beer is None
 
     async def test_delete_non_existent_beer_does_nothing(self, db_session: AsyncSession):
-        # Assuming delete_beer handles non-existent IDs gracefully (e.g., no error, or returns None)
-        # You might want to adjust this test based on the actual implementation's behavior for non-existent IDs.
         initial_beers = await get_all_beers(db_session)
-        await delete_beer(db_session, 99999)  # An ID that surely doesn't exist
+        await delete_beer(db_session, 99999)
         final_beers = await get_all_beers(db_session)
         assert len(initial_beers) == len(final_beers)

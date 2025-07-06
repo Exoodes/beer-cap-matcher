@@ -9,9 +9,8 @@ from src.models.beer_cap import BeerCap
 @pytest.mark.asyncio
 class TestBeerCapCRUD:
 
-    @pytest.fixture(autouse=True)  # This fixture will run automatically for each test in this class
+    @pytest.fixture(autouse=True)
     async def _setup_beer(self, db_session: AsyncSession):
-        """Creates a dummy beer for beer_cap related tests."""
         self.beer = await create_beer(db_session, "Test Beer For Caps")
         assert self.beer.id is not None
         yield
@@ -31,7 +30,6 @@ class TestBeerCapCRUD:
         assert fetched_cap.s3_key == "fetched_cap_s3_key.jpg"
 
     async def test_get_all_beer_caps(self, db_session: AsyncSession):
-        # Use the pre-created self.beer for consistency
         await create_beer_cap(db_session, self.beer.id, "cap_one.jpg")
         await create_beer_cap(db_session, self.beer.id, "cap_two.jpg")
         all_caps = await get_all_beer_caps(db_session)

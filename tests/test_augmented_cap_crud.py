@@ -17,7 +17,6 @@ class TestAugmentedCapCRUD:
 
     @pytest.fixture(autouse=True)
     async def _setup_beer_and_cap(self, db_session: AsyncSession):
-        """Creates a dummy beer and beer_cap for augmented_cap related tests."""
         self.beer = await create_beer(db_session, "Test Beer For Augmented Caps")
         self.beer_cap = await create_beer_cap(db_session, self.beer.id, "base_cap_for_aug_tests.jpg")
         assert self.beer_cap.id is not None
