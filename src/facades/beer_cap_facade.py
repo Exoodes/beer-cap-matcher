@@ -1,10 +1,10 @@
 import os
-from typing import BinaryIO, Optional
+from typing import Awaitable, BinaryIO, Callable, Optional
 
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database import async_session
+from src.database import GLOBAL_ASYNC_SESSION_MAKER
 from src.db.crud_augmented_cap import create_augmented_cap
 from src.db.crud_beer import create_beer, get_beer_by_id
 from src.db.crud_beer_cap import create_beer_cap, get_beer_cap_by_id
@@ -19,8 +19,13 @@ load_dotenv()
 
 
 class BeerCapFacade:
-    def __init__(self, minio_wrapper: MinioClientWrapper):
+    def __init__(
+        self,
+        minio_wrapper: MinioClientWrapper,
+        session_maker: Callable[[], Awaitable[AsyncSession]] = GLOBAL_ASYNC_SESSION_MAKER,
+    ):
         self.minio_wrapper = minio_wrapper
+        self.session_maker = session_maker
 
         self.original_caps_bucket = os.getenv("MINIO_ORIGINAL_CAPS_BUCKET")
         self.augmented_caps_bucket = os.getenv("MINIO_AUGMENTED_CAPS_BUCKET")
@@ -36,10 +41,10 @@ class BeerCapFacade:
         image_length: int,
         content_type: str = "image/png",
     ) -> BeerCap:
-        async with async_session() as session:
+        async with self.session_maker() as session:
             beer = await create_beer(session, beer_name, False)
 
-            object_name = f"{cap_metadata.filename}"
+            object_name = cap_metadata.filename
             self.minio_wrapper.upload_file(
                 self.original_caps_bucket, object_name, image_data, image_length, content_type
             )
@@ -55,12 +60,12 @@ class BeerCapFacade:
         image_length: int,
         content_type: str = "image/png",
     ) -> Optional[BeerCap]:
-        async with async_session() as session:
+        async with self.session_maker() as session:
             beer = await get_beer_by_id(session, beer_id)
             if not beer:
                 return None
 
-            object_name = f"{cap_metadata.filename}"
+            object_name = cap_metadata.filename
             self.minio_wrapper.upload_file(
                 self.original_caps_bucket, object_name, image_data, image_length, content_type
             )
@@ -77,20 +82,27 @@ class BeerCapFacade:
             self.minio_wrapper.delete_file(self.augmented_caps_bucket, aug.s3_key)
             await session.delete(aug)
 
+        await session.flush()
         return beer_cap
 
-    async def delete_beer_cap_and_its_augmented_caps(self, beer_cap_id: int) -> None:
-        async with async_session() as session:
-            beer_cap = await self._delete_augmented_caps_helper(session, beer_cap_id)
+    async def delete_beer_cap_and_its_augmented_caps(self, beer_cap_id: int):
+        async with self.session_maker() as session:
+            beer_cap = await get_beer_cap_by_id(session, beer_cap_id)
             if not beer_cap:
-                return
+                return None
+
+            for aug_cap in beer_cap.augmented_caps:
+                self.minio_wrapper.delete_file(self.augmented_caps_bucket, aug_cap.s3_key)
 
             self.minio_wrapper.delete_file(self.original_caps_bucket, beer_cap.s3_key)
+
             await session.delete(beer_cap)
+            await session.commit()
 
     async def delete_augmented_caps(self, beer_cap_id: int) -> None:
-        async with async_session() as session:
+        async with self.session_maker() as session:
             await self._delete_augmented_caps_helper(session, beer_cap_id)
+            await session.commit()
 
     async def add_augmented_cap_and_upload(
         self,
@@ -100,12 +112,12 @@ class BeerCapFacade:
         image_length: int,
         content_type: str = "image/png",
     ) -> Optional[AugmentedCap]:
-        async with async_session() as session:
+        async with self.session_maker() as session:
             beer_cap = await get_beer_cap_by_id(session, beer_cap_id)
             if not beer_cap:
                 return None
 
-            object_name = f"{aug_metadata.filename}"
+            object_name = aug_metadata.filename
             self.minio_wrapper.upload_file(
                 self.augmented_caps_bucket, object_name, image_data, image_length, content_type
             )
@@ -115,7 +127,7 @@ class BeerCapFacade:
             return aug_cap
 
     def get_presigned_url_for_cap(self, filename: str, is_augmented: bool = False) -> str:
-        object_name = f"{filename}"
+        object_name = filename
         bucket_name = self.augmented_caps_bucket if is_augmented else self.original_caps_bucket
 
         return self.minio_wrapper.generate_presigned_url(bucket_name, object_name)
