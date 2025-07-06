@@ -9,7 +9,6 @@ from src.db.crud.beer import create_beer, get_beer_by_id
 from src.db.crud.beer_cap import create_beer_cap, get_beer_cap_by_id
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
 from src.db.entities.augmented_cap import AugmentedCap
-from src.db.entities.beer import Beer
 from src.db.entities.beer_cap import BeerCap
 from src.schemas.augmented_cap_schema import AugmentedCapCreateSchema
 from src.schemas.beer_cap_schema import BeerCapCreateSchema
