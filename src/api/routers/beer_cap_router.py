@@ -4,8 +4,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponse, BeerResponse
+from src.api.schemas.beer_cap.update_schema import BeerCapUpdateSchema
 from src.api.schemas.common.delete_status_response import DeleteStatusResponse
-from src.db.crud.beer_cap import get_all_beer_caps, get_beer_cap_by_id, get_beer_caps_by_beer_id
+from src.db.crud.beer_cap import get_all_beer_caps, get_beer_cap_by_id, get_beer_caps_by_beer_id, update_beer_cap
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
 from src.facades.beer_cap_facade import BeerCapFacade
 from src.schemas.beer_cap_schema import BeerCapCreateSchema
@@ -170,4 +171,23 @@ async def delete_beer_cap(beer_cap_id: int):
     return DeleteStatusResponse(
         success=return_value,
         message="Beer cap and its augmented caps deleted successfully." if return_value else "Beer cap not found.",
+    )
+
+
+@router.patch("/{beer_cap_id}", response_model=BeerCapResponse)
+async def update_beer_cap_endpoint(beer_cap_id: int, update_data: BeerCapUpdateSchema):
+    async with GLOBAL_ASYNC_SESSION_MAKER() as session:
+        updated_cap = await update_beer_cap(session, beer_cap_id, update_data, load_beer=True)
+
+    if not updated_cap:
+        raise HTTPException(status_code=404, detail="Beer cap not found")
+
+    url = beer_cap_facade.get_presigned_url_for_cap(updated_cap.s3_key)
+    beer_response = BeerResponse(id=updated_cap.beer_id, name=updated_cap.beer.name)
+
+    return BeerCapResponse(
+        id=updated_cap.id,
+        variant_name=updated_cap.variant_name,
+        presigned_url=url,
+        beer=beer_response,
     )

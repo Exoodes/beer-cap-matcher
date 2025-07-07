@@ -1,16 +1,12 @@
-import io
-from typing import Optional
-
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, HTTPException
 from fastapi.params import Query
 
 from src.api.schemas.beer.beer_response import BeerCapShortResponse, BeerResponseWithCaps
-from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponse, BeerResponse
+from src.api.schemas.beer.update_schema import BeerUpdateSchema
 from src.api.schemas.common.delete_status_response import DeleteStatusResponse
-from src.db.crud.beer import delete_beer, get_all_beers, get_beer_by_id
+from src.db.crud.beer import get_all_beers, get_beer_by_id, update_beer
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
 from src.facades.beer_cap_facade import BeerCapFacade
-from src.schemas.beer_cap_schema import BeerCapCreateSchema
 from src.storage.minio_client import MinioClientWrapper
 
 router = APIRouter(prefix="/beers", tags=["Beers"])
@@ -72,3 +68,16 @@ async def api_delete_beer(beer_id: int):
         raise HTTPException(status_code=404, detail="Beer not found.")
 
     return DeleteStatusResponse(success=True, message="Beer deleted successfully.")
+
+
+@router.patch("/{beer_id}", response_model=BeerResponseWithCaps)
+async def update_beer_endpoint(beer_id: int, update_data: BeerUpdateSchema):
+    async with GLOBAL_ASYNC_SESSION_MAKER() as session:
+        updated_beer = await update_beer(session, beer_id, update_data, load_caps=True)
+
+    if not updated_beer:
+        raise HTTPException(status_code=404, detail="Beer not found")
+
+    caps = [BeerCapShortResponse(id=cap.id, variant_name=cap.variant_name) for cap in updated_beer.caps]
+
+    return BeerResponseWithCaps(id=updated_beer.id, name=updated_beer.name, caps=caps)

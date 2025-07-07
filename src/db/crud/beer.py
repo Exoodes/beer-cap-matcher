@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.api.schemas.beer.update_schema import BeerUpdateSchema
 from src.db.entities.beer import Beer
 
 
@@ -55,3 +56,28 @@ async def delete_beer(session: AsyncSession, beer_id: int) -> bool:
         await session.commit()
 
     return beer is not None
+
+
+async def update_beer(
+    session: AsyncSession,
+    beer_id: int,
+    update_data: BeerUpdateSchema,
+    load_caps: bool = False,
+) -> Optional[Beer]:
+    stmt = select(Beer).where(Beer.id == beer_id)
+
+    if load_caps:
+        stmt = stmt.options(selectinload(Beer.caps))
+
+    result = await session.execute(stmt)
+    beer = result.scalar_one_or_none()
+
+    if not beer:
+        return None
+
+    if update_data.name is not None:
+        beer.name = update_data.name
+
+    await session.commit()
+    await session.refresh(beer)
+    return beer

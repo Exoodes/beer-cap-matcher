@@ -11,7 +11,7 @@ def get_logger(name: str) -> logging.Logger:
         handler = logging.StreamHandler()
 
         formatter = ColoredFormatter(
-            "%(log_color)s%(levelname)-8s %(reset)s %(message)s",
+            ":%(log_color)s%(levelname)-8s%(reset)s %(message)s",
             log_colors={
                 "DEBUG": "cyan",
                 "INFO": "green",

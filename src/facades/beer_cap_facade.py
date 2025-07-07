@@ -4,7 +4,7 @@ from typing import Awaitable, BinaryIO, Callable, Optional
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.crud.augmented_cap import create_augmented_cap
+from src.db.crud.augmented_cap import create_augmented_cap, delete_augmented_cap, get_all_augmented_caps
 from src.db.crud.beer import create_beer, get_beer_by_id
 from src.db.crud.beer_cap import create_beer_cap, get_beer_cap_by_id
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
@@ -48,7 +48,7 @@ class BeerCapFacade:
                 self.original_caps_bucket, object_name, image_data, image_length, content_type
             )
 
-            beer_cap = await create_beer_cap(session, beer.id, object_name)
+            beer_cap = await create_beer_cap(session, beer.id, object_name, cap_metadata)
             beer_cap = await get_beer_cap_by_id(session, beer_cap.id, load_beer=True)
             return beer_cap
 
@@ -70,7 +70,7 @@ class BeerCapFacade:
                 self.original_caps_bucket, object_name, image_data, image_length, content_type
             )
 
-            beer_cap = await create_beer_cap(session, beer.id, object_name)
+            beer_cap = await create_beer_cap(session, beer.id, object_name, cap_metadata)
             beer_cap = await get_beer_cap_by_id(session, beer_cap.id, load_beer=True)
             return beer_cap
 
@@ -101,10 +101,24 @@ class BeerCapFacade:
             await session.commit()
             return True
 
-    async def delete_augmented_caps(self, beer_cap_id: int) -> None:
+    async def delete_augmented_caps(self, beer_cap_id: int) -> bool:
         async with self.session_maker() as session:
-            await self._delete_augmented_caps_helper(session, beer_cap_id)
+            result = await self._delete_augmented_caps_helper(session, beer_cap_id)
             await session.commit()
+
+        return result is not None
+
+    async def delete_all_augmented_caps(self) -> int:
+        deleted_count = 0
+        async with self.session_maker() as session:
+            augmented_caps = await get_all_augmented_caps(session)
+            for aug in augmented_caps:
+                self.minio_wrapper.delete_file(self.augmented_caps_bucket, aug.s3_key)
+                await delete_augmented_cap(session, aug.id)
+                deleted_count += 1
+
+            await session.commit()
+        return deleted_count
 
     async def delete_beer_and_caps(self, beer_id: int) -> bool:
         async with self.session_maker() as session:
