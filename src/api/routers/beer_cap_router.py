@@ -12,7 +12,7 @@ from src.facades.beer_cap_facade import BeerCapFacade
 from src.schemas.beer_cap_schema import BeerCapCreateSchema
 from src.storage.minio_client import MinioClientWrapper
 
-router = APIRouter(prefix="/beer_cap", tags=["Beer Cap"])
+router = APIRouter(prefix="/beer_caps", tags=["Beer Caps"])
 
 minio_client = MinioClientWrapper()
 beer_cap_facade = BeerCapFacade(minio_client)
