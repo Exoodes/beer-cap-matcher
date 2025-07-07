@@ -2,6 +2,7 @@ from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.db.entities.augmented_cap import AugmentedCap
 
@@ -29,3 +30,5 @@ async def delete_augmented_cap(session: AsyncSession, augmented_cap_id: int) -> 
     if aug:
         await session.delete(aug)
         await session.commit()
+
+    return aug is not None

@@ -70,8 +70,10 @@ async def get_all_beer_caps(
     return result.scalars().all()
 
 
-async def delete_beer_cap(session: AsyncSession, beer_cap_id: int) -> None:
+async def delete_beer_cap(session: AsyncSession, beer_cap_id: int) -> bool:
     cap = await get_beer_cap_by_id(session, beer_cap_id)
     if cap:
         await session.delete(cap)
         await session.commit()
+
+    return cap is not None

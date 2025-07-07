@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 
-from src.api.routers import beer_cap_router
+from src.api.routers import beer_cap_router, beer_router
 
 app = FastAPI(title="Beer Cap API")
 
 app.include_router(beer_cap_router.router)
+app.include_router(beer_router.router)
 
 if __name__ == "__main__":
     import uvicorn
