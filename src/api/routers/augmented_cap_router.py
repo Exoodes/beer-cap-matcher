@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 from fastapi.params import Depends
 
 from src.api.schemas.common.delete_status_response import DeleteStatusResponse
@@ -8,7 +8,11 @@ from src.facades.beer_cap_facade import BeerCapFacade
 router = APIRouter(prefix="/augmented_caps", tags=["Augmented Caps"])
 
 
-@router.delete("/{cap_id}", response_model=DeleteStatusResponse)
+@router.delete(
+    "/{cap_id}/",
+    response_model=DeleteStatusResponse,
+    responses={404: {"description": "Cap not found"}, 500: {"description": "Internal server error"}},
+)
 async def delete_augmented_cap(cap_id: int, beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade)):
     """
     Delete a specific augmented cap by its ID.
@@ -19,7 +23,7 @@ async def delete_augmented_cap(cap_id: int, beer_cap_facade: BeerCapFacade = Dep
     return DeleteStatusResponse(success=True, message="Augmented cap deleted")
 
 
-@router.delete("/", response_model=DeleteStatusResponse)
+@router.delete("/", response_model=DeleteStatusResponse, responses={500: {"description": "Internal server error"}})
 async def delete_all_augmented_caps(beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade)):
     """
     Delete all augmented caps.

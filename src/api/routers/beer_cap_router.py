@@ -1,7 +1,7 @@
 import io
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponse, BeerResponse
@@ -15,7 +15,11 @@ from src.schemas.beer_cap_schema import BeerCapCreateSchema
 router = APIRouter(prefix="/beer_caps", tags=["Beer Caps"])
 
 
-@router.post("/", response_model=BeerCapResponse)
+@router.post(
+    "/",
+    response_model=BeerCapResponse,
+    responses={400: {"description": "Bad request"}, 500: {"description": "Internal server error"}},
+)
 async def create_cap_with_new_beer(
     beer_name: str = Form(...),
     variant_name: Optional[str] = Form(None),
@@ -45,7 +49,7 @@ async def create_cap_with_new_beer(
     )
 
 
-@router.get("", response_model=List[BeerCapResponse])
+@router.get("/", response_model=List[BeerCapResponse], responses={500: {"description": "Internal server error"}})
 async def api_get_all_beer_caps(
     beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
     db: AsyncSession = Depends(get_db_session),
@@ -70,7 +74,11 @@ async def api_get_all_beer_caps(
     return result
 
 
-@router.get("/by_beer/{beer_id}", response_model=List[BeerCapResponse])
+@router.get(
+    "/by_beer/{beer_id}/",
+    response_model=List[BeerCapResponse],
+    responses={404: {"description": "No beer caps found for this beer"}, 500: {"description": "Internal server error"}},
+)
 async def get_all_caps_from_beer(
     beer_id: int,
     beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
@@ -99,7 +107,11 @@ async def get_all_caps_from_beer(
     return result
 
 
-@router.get("/{beer_cap_id}", response_model=BeerCapResponse)
+@router.get(
+    "/{beer_cap_id}/",
+    response_model=BeerCapResponse,
+    responses={404: {"description": "Beer cap not found"}, 500: {"description": "Internal server error"}},
+)
 async def get_beer_cap(
     beer_cap_id: int,
     beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
@@ -124,7 +136,11 @@ async def get_beer_cap(
     )
 
 
-@router.delete("/{beer_cap_id}", response_model=DeleteStatusResponse)
+@router.delete(
+    "/{beer_cap_id}/",
+    response_model=DeleteStatusResponse,
+    responses={404: {"description": "Beer cap not found"}, 500: {"description": "Internal server error"}},
+)
 async def delete_beer_cap(
     beer_cap_id: int,
     beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
@@ -143,7 +159,15 @@ async def delete_beer_cap(
     )
 
 
-@router.patch("/{beer_cap_id}", response_model=BeerCapResponse)
+@router.patch(
+    "/{beer_cap_id}/",
+    response_model=BeerCapResponse,
+    responses={
+        404: {"description": "Beer cap not found"},
+        400: {"description": "Bad request"},
+        500: {"description": "Internal server error"},
+    },
+)
 async def update_beer_cap_endpoint(
     beer_cap_id: int,
     update_data: BeerCapUpdateSchema,
