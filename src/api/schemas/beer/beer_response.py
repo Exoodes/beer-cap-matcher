@@ -5,9 +5,9 @@ from pydantic import BaseModel, ConfigDict
 
 class BeerCapShortResponse(BaseModel):
     id: int
-    variant_name: Optional[str]
+    variant_name: Optional[str] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
 
 
 class BeerResponseWithCaps(BaseModel):
@@ -15,4 +15,4 @@ class BeerResponseWithCaps(BaseModel):
     name: str
     caps: Optional[List[BeerCapShortResponse]] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra="forbid")

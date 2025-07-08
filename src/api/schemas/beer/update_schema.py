@@ -6,4 +6,4 @@ from pydantic import BaseModel, ConfigDict
 class BeerUpdateSchema(BaseModel):
     name: Optional[str]
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
