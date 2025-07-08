@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from src.api.routers import augmented_cap_router, beer_cap_router, beer_router
 
 app = FastAPI(title="Beer Cap API")
+app.router.redirect_slashes = True
 
 app.include_router(beer_cap_router.router)
 app.include_router(beer_router.router)
