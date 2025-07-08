@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException
 from fastapi.params import Depends
 
 from src.api.schemas.common.delete_status_response import DeleteStatusResponse

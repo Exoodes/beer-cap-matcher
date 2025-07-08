@@ -1,7 +1,7 @@
 import io
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponse, BeerResponse
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/beer_caps", tags=["Beer Caps"])
 @router.post(
     "/",
     response_model=BeerCapResponse,
-    responses={400: {"description": "Bad request"}, 500: {"description": "Internal server error"}},
+    responses={422: {"description": "Validation Error"}, 500: {"description": "Internal server error"}},
 )
 async def create_cap_with_new_beer(
     beer_name: str = Form(...),
@@ -164,7 +164,7 @@ async def delete_beer_cap(
     response_model=BeerCapResponse,
     responses={
         404: {"description": "Beer cap not found"},
-        400: {"description": "Bad request"},
+        422: {"description": "Validation Error"},
         500: {"description": "Internal server error"},
     },
 )

@@ -16,7 +16,9 @@ from src.schemas.beer_cap_schema import BeerCapCreateSchema
 router = APIRouter(prefix="/beers", tags=["Beers"])
 
 
-@router.get("/caps", response_model=List[BeerResponseWithCaps])
+@router.get(
+    "/caps/", response_model=List[BeerResponseWithCaps], responses={500: {"description": "Internal server error"}}
+)
 async def get_all_beer_caps(
     include_caps: bool = Query(False, description="Include caps for each beer"),
     db: AsyncSession = Depends(get_db_session),
@@ -37,7 +39,11 @@ async def get_all_beer_caps(
     return result
 
 
-@router.get("/{beer_id}", response_model=BeerResponseWithCaps)
+@router.get(
+    "/{beer_id}/",
+    response_model=BeerResponseWithCaps,
+    responses={404: {"description": "Beer not found"}, 500: {"description": "Internal server error"}},
+)
 async def api_get_beer_by_id(
     beer_id: int,
     include_caps: bool = Query(False, description="Include caps for the beer"),
@@ -57,7 +63,11 @@ async def api_get_beer_by_id(
     return BeerResponseWithCaps(id=beer.id, name=beer.name, caps=caps)
 
 
-@router.delete("/{beer_id}", response_model=DeleteStatusResponse)
+@router.delete(
+    "/{beer_id}/",
+    response_model=DeleteStatusResponse,
+    responses={404: {"description": "Beer not found"}, 500: {"description": "Internal server error"}},
+)
 async def api_delete_beer(beer_id: int, beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade)):
     """
     Delete a beer by its ID.
@@ -70,7 +80,15 @@ async def api_delete_beer(beer_id: int, beer_cap_facade: BeerCapFacade = Depends
     return DeleteStatusResponse(success=True, message="Beer deleted successfully.")
 
 
-@router.patch("/{beer_id}", response_model=BeerResponseWithCaps)
+@router.patch(
+    "/{beer_id}/",
+    response_model=BeerResponseWithCaps,
+    responses={
+        404: {"description": "Beer not found"},
+        422: {"description": "Validation Error"},
+        500: {"description": "Internal server error"},
+    },
+)
 async def update_beer_endpoint(
     beer_id: int,
     update_data: BeerUpdateSchema,
@@ -88,7 +106,15 @@ async def update_beer_endpoint(
     return BeerResponseWithCaps(id=updated_beer.id, name=updated_beer.name, caps=caps)
 
 
-@router.post("/{beer_id}/caps", response_model=BeerCapResponse)
+@router.post(
+    "/{beer_id}/caps/",
+    response_model=BeerCapResponse,
+    responses={
+        404: {"description": "Beer not found"},
+        422: {"description": "Validation Error"},
+        500: {"description": "Internal server error"},
+    },
+)
 async def create_cap_existing_beer(
     beer_id: int,
     variant_name: Optional[str] = Form(None),
