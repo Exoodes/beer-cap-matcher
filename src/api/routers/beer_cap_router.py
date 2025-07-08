@@ -2,60 +2,26 @@ import io
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponse, BeerResponse
 from src.api.schemas.beer_cap.update_schema import BeerCapUpdateSchema
 from src.api.schemas.common.delete_status_response import DeleteStatusResponse
 from src.db.crud.beer_cap import get_all_beer_caps, get_beer_cap_by_id, get_beer_caps_by_beer_id, update_beer_cap
-from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
+from src.dependencies.db import get_db_session
+from src.dependencies.facades import get_beer_cap_facade
 from src.facades.beer_cap_facade import BeerCapFacade
 from src.schemas.beer_cap_schema import BeerCapCreateSchema
-from src.storage.minio_client import MinioClientWrapper
 
 router = APIRouter(prefix="/beer_caps", tags=["Beer Caps"])
 
-minio_client = MinioClientWrapper()
-beer_cap_facade = BeerCapFacade(minio_client)
 
-
-@router.post("", response_model=BeerCapResponse)
-async def create_cap_existing_beer(
-    beer_id: int = Form(...),
-    variant_name: Optional[str] = Form(None),
-    file: UploadFile = File(...),
-):
-    """
-    Upload a beer cap image for an existing beer.
-    """
-    contents = await file.read()
-    file_like = io.BytesIO(contents)
-
-    cap_metadata = BeerCapCreateSchema(filename=file.filename, variant_name=variant_name)
-
-    beer_cap = await beer_cap_facade.create_cap_for_existing_beer_and_upload(
-        beer_id, cap_metadata, file_like, len(contents), file.content_type
-    )
-
-    if not beer_cap:
-        raise HTTPException(status_code=404, detail="Beer not found.")
-
-    url = beer_cap_facade.get_presigned_url_for_cap(beer_cap.s3_key)
-
-    beer_response = BeerResponse(id=beer_cap.beer_id, name=beer_cap.beer.name)
-
-    return BeerCapResponse(
-        id=beer_cap.id,
-        variant_name=beer_cap.variant_name,
-        presigned_url=url,
-        beer=beer_response,
-    )
-
-
-@router.post("/with_beer", response_model=BeerCapResponse)
+@router.post("/", response_model=BeerCapResponse)
 async def create_cap_with_new_beer(
     beer_name: str = Form(...),
     variant_name: Optional[str] = Form(None),
     file: UploadFile = File(...),
+    beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
 ):
     """
     Upload a beer cap image for a new beer (creates the beer entry as well).
@@ -82,13 +48,15 @@ async def create_cap_with_new_beer(
 
 
 @router.get("", response_model=list[BeerCapResponse])
-async def api_get_all_beer_caps():
+async def api_get_all_beer_caps(
+    beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
+    db: AsyncSession = Depends(get_db_session),
+):
     """
     Retrieve all beer caps with their presigned URLs.
     """
 
-    async with GLOBAL_ASYNC_SESSION_MAKER() as session:
-        beer_caps = await get_all_beer_caps(session, load_beer=True)
+    beer_caps = await get_all_beer_caps(db, load_beer=True)
 
     result = []
     for beer_cap in beer_caps:
@@ -109,15 +77,18 @@ async def api_get_all_beer_caps():
 
 
 @router.get("/{beer_cap_id}", response_model=BeerCapResponse)
-async def get_beer_cap(beer_cap_id: int):
+async def get_beer_cap(
+    beer_cap_id: int,
+    beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
+    db: AsyncSession = Depends(get_db_session),
+):
     """
     Get a beer cap by ID, including its presigned URL.
     """
 
-    async with GLOBAL_ASYNC_SESSION_MAKER() as session:
-        beer_cap = await get_beer_cap_by_id(session, beer_cap_id, load_beer=True)
-        if not beer_cap:
-            raise HTTPException(status_code=404, detail="Beer cap not found.")
+    beer_cap = await get_beer_cap_by_id(db, beer_cap_id, load_beer=True)
+    if not beer_cap:
+        raise HTTPException(status_code=404, detail="Beer cap not found.")
 
     url = beer_cap_facade.get_presigned_url_for_cap(beer_cap.s3_key)
 
@@ -132,13 +103,16 @@ async def get_beer_cap(beer_cap_id: int):
 
 
 @router.get("/by_beer/{beer_id}", response_model=list[BeerCapResponse])
-async def get_all_caps_from_beer(beer_id: int):
+async def get_all_caps_from_beer(
+    beer_id: int,
+    beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
+    db: AsyncSession = Depends(get_db_session),
+):
     """
     Retrieve all beer caps for a specific beer ID.
     """
 
-    async with GLOBAL_ASYNC_SESSION_MAKER() as session:
-        beer_caps = await get_beer_caps_by_beer_id(session, beer_id, load_beer=True)
+    beer_caps = await get_beer_caps_by_beer_id(db, beer_id, load_beer=True)
 
     if not beer_caps:
         raise HTTPException(status_code=404, detail="No beer caps found for this beer.")
@@ -162,7 +136,10 @@ async def get_all_caps_from_beer(beer_id: int):
 
 
 @router.delete("/{beer_cap_id}")
-async def delete_beer_cap(beer_cap_id: int):
+async def delete_beer_cap(
+    beer_cap_id: int,
+    beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
+):
     """
     Delete a beer cap and its augmented caps.
     """
@@ -175,9 +152,13 @@ async def delete_beer_cap(beer_cap_id: int):
 
 
 @router.patch("/{beer_cap_id}", response_model=BeerCapResponse)
-async def update_beer_cap_endpoint(beer_cap_id: int, update_data: BeerCapUpdateSchema):
-    async with GLOBAL_ASYNC_SESSION_MAKER() as session:
-        updated_cap = await update_beer_cap(session, beer_cap_id, update_data, load_beer=True)
+async def update_beer_cap_endpoint(
+    beer_cap_id: int,
+    update_data: BeerCapUpdateSchema,
+    beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
+    db: AsyncSession = Depends(get_db_session),
+):
+    updated_cap = await update_beer_cap(db, beer_cap_id, update_data, load_beer=True)
 
     if not updated_cap:
         raise HTTPException(status_code=404, detail="Beer cap not found")
