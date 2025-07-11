@@ -1,8 +1,18 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routers import augmented_cap_router, beer_cap_router, beer_router
 
 app = FastAPI(title="Beer Cap API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.router.redirect_slashes = True
 
 app.include_router(beer_cap_router.router)

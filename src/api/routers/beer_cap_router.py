@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponse, BeerResponse
 from src.api.schemas.beer_cap.update_schema import BeerCapUpdateSchema
 from src.api.schemas.common.delete_status_response import DeleteStatusResponse
+from src.db.crud.beer_cap import get_all_beer_caps, get_beer_cap_by_id, get_beer_caps_by_beer_id, update_beer_cap
 from src.dependencies.db import get_db_session
 from src.dependencies.facades import get_beer_cap_facade
 from src.facades.beer_cap_facade import BeerCapFacade
@@ -57,7 +58,7 @@ async def api_get_all_beer_caps(
     """
     Retrieve all beer caps with their presigned URLs.
     """
-    beer_caps = await beer_cap_facade.get_all_beer_caps(db)
+    beer_caps = await get_all_beer_caps(db, load_beer=True)
 
     result = []
     for beer_cap in beer_caps:
@@ -87,7 +88,7 @@ async def get_all_caps_from_beer(
     """
     Retrieve all beer caps for a specific beer ID.
     """
-    beer_caps = await beer_cap_facade.get_beer_caps_by_beer_id(db, beer_id)
+    beer_caps = await get_beer_caps_by_beer_id(db, beer_id, load_beer=True)
 
     if not beer_caps:
         raise HTTPException(status_code=404, detail="No beer caps found for this beer.")
@@ -120,7 +121,7 @@ async def get_beer_cap(
     """
     Get a beer cap by ID, including its presigned URL.
     """
-    beer_cap = await beer_cap_facade.get_beer_cap_by_id(db, beer_cap_id)
+    beer_cap = await get_beer_cap_by_id(db, beer_cap_id, load_beer=True)
 
     if not beer_cap:
         raise HTTPException(status_code=404, detail="Beer cap not found.")
@@ -177,7 +178,7 @@ async def update_beer_cap_endpoint(
     """
     Update beer cap details.
     """
-    updated_cap = await beer_cap_facade.update_beer_cap(db, beer_cap_id, update_data)
+    updated_cap = await update_beer_cap(db, beer_cap_id, update_data, load_beer=True)
 
     if not updated_cap:
         raise HTTPException(status_code=404, detail="Beer cap not found.")

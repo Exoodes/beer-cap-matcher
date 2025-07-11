@@ -8,6 +8,7 @@ from src.api.schemas.beer.beer_response import BeerCapShortResponse, BeerRespons
 from src.api.schemas.beer.update_schema import BeerUpdateSchema
 from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponse, BeerResponse
 from src.api.schemas.common.delete_status_response import DeleteStatusResponse
+from src.db.crud.beer import get_all_beers, get_beer_by_id, update_beer
 from src.dependencies.db import get_db_session
 from src.dependencies.facades import get_beer_cap_facade
 from src.facades.beer_cap_facade import BeerCapFacade
@@ -16,9 +17,7 @@ from src.schemas.beer_cap_schema import BeerCapCreateSchema
 router = APIRouter(prefix="/beers", tags=["Beers"])
 
 
-@router.get(
-    "/caps/", response_model=List[BeerResponseWithCaps], responses={500: {"description": "Internal server error"}}
-)
+@router.get("/", response_model=List[BeerResponseWithCaps], responses={500: {"description": "Internal server error"}})
 async def get_all_beer_caps(
     include_caps: bool = Query(False, description="Include caps for each beer"),
     db: AsyncSession = Depends(get_db_session),
@@ -26,7 +25,7 @@ async def get_all_beer_caps(
     """
     Get all beers, optionally including their caps.
     """
-    beers = await BeerCapFacade.get_all_beers(db, load_caps=include_caps)
+    beers = await get_all_beers(db, load_caps=include_caps)
 
     result = []
     for beer in beers:
@@ -52,7 +51,7 @@ async def api_get_beer_by_id(
     """
     Get a specific beer by its ID, optionally including its caps.
     """
-    beer = await BeerCapFacade.get_beer_by_id(db, beer_id, load_caps=include_caps)
+    beer = await get_beer_by_id(db, beer_id, load_caps=include_caps)
 
     if not beer:
         raise HTTPException(status_code=404, detail="Beer not found.")
@@ -97,7 +96,7 @@ async def update_beer_endpoint(
     """
     Update beer details.
     """
-    updated_beer = await BeerCapFacade.update_beer(db, beer_id, update_data, load_caps=True)
+    updated_beer = await update_beer(db, beer_id, update_data, load_caps=True)
 
     if not updated_beer:
         raise HTTPException(status_code=404, detail="Beer not found.")
