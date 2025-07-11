@@ -1,6 +1,5 @@
-import os
-import pickle
-from typing import List
+import io
+from typing import Dict, Iterable, List, Tuple
 
 import torch
 from PIL import Image
@@ -14,24 +13,23 @@ logger = get_logger(__name__)
 
 
 class EmbeddingGenerator:
-    def __init__(self, image_dir: str, output_path: str) -> None:
-        self.image_dir = image_dir
-        self.output_path = output_path
+    """Generate CLIP embeddings for images provided as bytes."""
+
+    def __init__(self) -> None:
         self.device: str = "cuda" if torch.cuda.is_available() else "cpu"
         self.model, self.preprocess = load_model_and_preprocess()
         self.model.eval()
 
-    def generate_embeddings(self) -> None:
+
+    def generate_embeddings_from_bytes(self, images: Iterable[Tuple[str, bytes]]) -> Dict[str, List]:
+        """Generate embeddings directly from image bytes."""
+
         embeddings: List[torch.Tensor] = []
         filenames: List[str] = []
 
-        for filename in tqdm(os.listdir(self.image_dir), desc="Generating embeddings"):
-            if not filename.lower().endswith((".png", ".jpg", ".jpeg", ".bmp")):
-                continue
-
-            image_path = os.path.join(self.image_dir, filename)
+        for filename, data in images:
             try:
-                image = Image.open(image_path)
+                image = Image.open(io.BytesIO(data))
 
                 if image.mode == "RGBA":
                     background = Image.new("RGBA", image.size, (255, 255, 255, 255))
@@ -51,13 +49,9 @@ class EmbeddingGenerator:
             except Exception as e:
                 logger.warning(f"Failed to process {filename}: {e}")
 
-        self.save_embeddings(embeddings, filenames)
+        return {IMAGE_PATHS_KEY: filenames, EMBEDDINGS_KEY: embeddings}
 
     def save_embeddings(self, embeddings: List[torch.Tensor], filenames: List[str]) -> None:
-        os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
+        """Deprecated: saving to disk is no longer supported."""
+        raise NotImplementedError("Saving embeddings to disk is removed")
 
-        data = {EMBEDDINGS_KEY: embeddings, IMAGE_PATHS_KEY: filenames}
-        with open(self.output_path, "wb") as f:
-            pickle.dump(data, f)
-
-        logger.info(f"Saved {len(embeddings)} embeddings to {self.output_path}")

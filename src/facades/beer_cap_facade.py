@@ -1,4 +1,6 @@
+import io
 import os
+from pathlib import Path
 from typing import Awaitable, BinaryIO, Callable, Optional
 
 from dotenv import load_dotenv
@@ -10,6 +12,7 @@ from src.db.crud.beer_cap import create_beer_cap, get_beer_cap_by_id
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
 from src.db.entities.augmented_cap import AugmentedCap
 from src.db.entities.beer_cap import BeerCap
+from src.cap_detection.preprocessing.image_processor import ImageAugmenter
 from src.schemas.augmented_cap_schema import AugmentedCapCreateSchema
 from src.schemas.beer_cap_schema import BeerCapCreateSchema
 from src.storage.minio_client import MinioClientWrapper
@@ -162,3 +165,50 @@ class BeerCapFacade:
         bucket_name = self.augmented_caps_bucket if is_augmented else self.original_caps_bucket
 
         return self.minio_wrapper.generate_presigned_url(bucket_name, object_name)
+
+    async def augment_beer_cap(
+        self,
+        beer_cap_id: int,
+        u2net_model_path: Optional[str] = None,
+        augmentations_per_image: int = 10,
+    ) -> list[AugmentedCap]:
+        """Download a beer cap, generate augmentations and upload them back."""
+
+        if u2net_model_path is None:
+            u2net_model_path = os.getenv("U2NET_MODEL_PATH")
+            if not u2net_model_path:
+                raise ValueError("U2NET_MODEL_PATH must be provided or set in environment")
+
+        async with self.session_maker() as session:
+            beer_cap = await get_beer_cap_by_id(session, beer_cap_id)
+            if not beer_cap:
+                return []
+
+            image_bytes = self.minio_wrapper.download_bytes(self.original_caps_bucket, beer_cap.s3_key)
+
+            augmenter = ImageAugmenter(
+                input_dir=None,
+                output_dir=None,
+                u2net_model_path=Path(u2net_model_path),
+                augmentation_map_path=None,
+                augmentations_per_image=augmentations_per_image,
+            )
+
+            augmented_images = augmenter.augment_image_bytes(image_bytes, beer_cap.s3_key)
+
+            created: list[AugmentedCap] = []
+            for filename, data in augmented_images.items():
+                file_like = io.BytesIO(data)
+                self.minio_wrapper.upload_file(
+                    self.augmented_caps_bucket,
+                    filename,
+                    file_like,
+                    len(data),
+                    "image/png",
+                )
+
+                aug_cap = await create_augmented_cap(session, beer_cap_id, filename)
+                created.append(aug_cap)
+
+            await session.commit()
+            return created
