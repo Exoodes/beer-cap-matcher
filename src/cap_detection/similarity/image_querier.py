@@ -1,6 +1,6 @@
+import io
 from collections import defaultdict
 from dataclasses import dataclass
-import io
 from typing import Dict, List, Optional, Tuple
 
 import faiss
@@ -8,9 +8,9 @@ import numpy as np
 import torch
 from PIL import Image
 
-from src.embeddings.model_loader import load_model_and_preprocess
-from src.preprocessing.augmentation import crop_transparent
-from src.preprocessing.background_remover import BackgroundRemover
+from src.cap_detection.embeddings.model_loader import load_model_and_preprocess
+from src.cap_detection.preprocessing.augmentation import crop_transparent
+from src.cap_detection.preprocessing.background_remover import BackgroundRemover
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -57,7 +57,6 @@ class ImageQuerier:
 
         return aggregated[:top_k]
 
-
     def _process_image_bytes(self, data: bytes) -> torch.Tensor:
         image = Image.open(io.BytesIO(data)).convert("RGBA")
         image = self.background_remover.remove_background(image)
@@ -76,10 +75,7 @@ class ImageQuerier:
             faiss.normalize_L2(embedding)
 
         distances, indices = self.index.search(embedding, top_k)
-        results = [
-            (self.metadata[idx], float(dist))
-            for idx, dist in zip(indices[0], distances[0])
-        ]
+        results = [(self.metadata[idx], float(dist)) for idx, dist in zip(indices[0], distances[0])]
         return results
 
     def _aggregate_results(self, results: List[Tuple[str, float]]) -> List[AggregatedResult]:
