@@ -82,3 +82,16 @@ async def generate_embeddings(cap_detection_service: CapDetectionService = Depen
     """
     embeddings_count = await cap_detection_service.generate_embeddings()
     return StatusResponse(success=True, message=f"Generated {embeddings_count} embeddings")
+
+
+@router.post(
+    "/generate_index/",
+    response_model=StatusResponse,
+    responses={500: {"description": "Internal server error"}},
+)
+async def generate_index(cap_detection_service: CapDetectionService = Depends(get_cap_detection_service)):
+    """
+    Generate index for all augmented cap embeddings.
+    """
+    index_count = await cap_detection_service.generate_index()
+    return StatusResponse(success=True, message=f"Generated index for {index_count} embeddings")

@@ -1,41 +1,40 @@
-# pyright: reportUnknownMemberType=false
-
 import pickle
+from typing import List
 
 import faiss
 import numpy as np
 
-from src.utils.constants import EMBEDDINGS_KEY, IMAGE_PATHS_KEY
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 
 class IndexBuilder:
-    def __init__(self, embedding_path: str, index_path: str, metadata_path: str):
-        self.embedding_path = embedding_path
-        self.index_path = index_path
-        self.metadata_path = metadata_path
+    def __init__(self):
+        pass  # No need for paths anymore
 
-    def build_index(self) -> None:
-        logger.info("Loading embeddings from %s", self.embedding_path)
-        with open(self.embedding_path, "rb") as f:
-            data = pickle.load(f)
+    def build_index(
+        self, embeddings: List[List[float]], metadata: List[str]  # e.g. s3 keys or IDs matching the embeddings
+    ) -> tuple[faiss.IndexFlatIP, bytes]:
+        """
+        Build a FAISS index from in-memory data.
 
-        embeddings = np.array(data[EMBEDDINGS_KEY]).astype("float32")
-        metadata = data[IMAGE_PATHS_KEY]
+        Args:
+            embeddings: A list of float vectors (same length).
+            metadata: A list of identifiers (e.g. s3 keys or image IDs).
 
-        faiss.normalize_L2(embeddings)
-
+        Returns:
+            index: The built FAISS index object.
+            metadata_blob: The pickled metadata for saving.
+        """
         logger.info("Building FAISS index with %d vectors", len(embeddings))
-        index = faiss.IndexFlatIP(embeddings.shape[1])
-        index.add(embeddings)  # pyright: ignore[reportCallIssue]
 
-        logger.info("Saving index to %s", self.index_path)
-        faiss.write_index(index, self.index_path)
+        np_embeddings = np.array(embeddings, dtype=np.float32)
+        faiss.normalize_L2(np_embeddings)
 
-        logger.info("Saving metadata to %s", self.metadata_path)
-        with open(self.metadata_path, "wb") as f:
-            pickle.dump(metadata, f)
+        index = faiss.IndexFlatIP(np_embeddings.shape[1])
+        index.add(np_embeddings)
 
-        logger.info("Index building complete.")
+        metadata_blob = pickle.dumps(metadata)
+
+        return index, metadata_blob

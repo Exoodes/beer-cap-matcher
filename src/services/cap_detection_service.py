@@ -4,10 +4,12 @@ import os
 from pathlib import Path
 from typing import Awaitable, Callable, List
 
+import faiss
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.cap_detection.embeddings.embedding_generator import EmbeddingGenerator
+from src.cap_detection.indexer.index_builder import IndexBuilder
 from src.cap_detection.preprocessing.background_remover import BackgroundRemover
 from src.cap_detection.preprocessing.image_processor import ImageAugmenter
 from src.db.crud.augmented_cap import create_augmented_cap, get_all_augmented_caps
@@ -33,9 +35,12 @@ class CapDetectionService:
 
         self.original_caps_bucket = os.getenv("MINIO_ORIGINAL_CAPS_BUCKET")
         self.augmented_caps_bucket = os.getenv("MINIO_AUGMENTED_CAPS_BUCKET")
+        self.index_bucket = os.getenv("MINIO_INDEX_BUCKET")
 
-        if not self.original_caps_bucket or not self.augmented_caps_bucket:
-            raise ValueError("MINIO_ORIGINAL_CAPS_BUCKET and MINIO_AUGMENTED_CAPS_BUCKET must be set in .env")
+        if not self.original_caps_bucket or not self.augmented_caps_bucket or not self.index_bucket:
+            raise ValueError(
+                "MINIO_ORIGINAL_CAPS_BUCKET, MINIO_AUGMENTED_CAPS_BUCKET, and MINIO_INDEX_BUCKET must be set in .env"
+            )
 
         self.u2net_model_path = u2net_model_path or os.getenv("U2NET_MODEL_PATH")
         if not self.u2net_model_path:
@@ -48,6 +53,7 @@ class CapDetectionService:
         )
 
         self.embedding_generator = EmbeddingGenerator()
+        self.index_builder = IndexBuilder()
 
     async def preprocess(self) -> int:
         """Download caps, augment them and upload results back to storage."""
@@ -93,3 +99,36 @@ class CapDetectionService:
 
             await session.commit()
             return {"updated_embeddings": len(augmented_caps)}
+
+    async def generate_index(self) -> None:
+        """Generate FAISS index for augmented beer caps."""
+
+        async with self.session_maker() as session:
+            augmented_caps = await get_all_augmented_caps(session)
+
+            embeddings = []
+            metadata = []
+            for aug_cap in augmented_caps:
+                if aug_cap.embedding_vector:
+                    embeddings.append(aug_cap.embedding_vector)
+                    metadata.append(aug_cap.s3_key)
+
+            index, metadata_blob = await asyncio.to_thread(self.index_builder.build_index, embeddings, metadata)
+
+            index_bytes = faiss.serialize_index(index)
+
+            self.minio_wrapper.upload_file(
+                self.index_bucket,
+                "beer-cap.index",
+                io.BytesIO(index_bytes),
+                len(index_bytes),
+            )
+
+            self.minio_wrapper.upload_file(
+                self.index_bucket,
+                "beer-cap.metadata.pkl",
+                io.BytesIO(metadata_blob),
+                len(metadata_blob),
+            )
+
+            return len(embeddings)
