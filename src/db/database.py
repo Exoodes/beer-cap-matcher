@@ -1,8 +1,11 @@
 import os
 from typing import Tuple
 
+from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import sessionmaker
+
+load_dotenv()
 
 
 def get_db_resources(database_url: str, echo: bool = False) -> Tuple[AsyncEngine, sessionmaker]:

@@ -24,7 +24,7 @@ repl:
 	$(PYTHON) -m src.main --repl
 
 api:
-	uvicorn run_api:app --reload --host 0.0.0.0 --port 8000
+	uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
 
 setup-postgres:
 	python -m src.scripts.create_tables

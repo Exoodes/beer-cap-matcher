@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
 
-class DeleteStatusResponse(BaseModel):
+class StatusResponse(BaseModel):
     success: bool
     message: str

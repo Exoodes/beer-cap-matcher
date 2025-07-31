@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.schemas.beer.beer_response import BeerCapShortResponse, BeerResponseWithCaps
 from src.api.schemas.beer.update_schema import BeerUpdateSchema
 from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponse, BeerResponse
-from src.api.schemas.common.delete_status_response import DeleteStatusResponse
+from src.api.schemas.common.delete_status_response import StatusResponse
 from src.db.crud.beer import get_all_beers, get_beer_by_id, update_beer
 from src.dependencies.db import get_db_session
 from src.dependencies.facades import get_beer_cap_facade
@@ -64,7 +64,7 @@ async def api_get_beer_by_id(
 
 @router.delete(
     "/{beer_id}/",
-    response_model=DeleteStatusResponse,
+    response_model=StatusResponse,
     responses={404: {"description": "Beer not found"}, 500: {"description": "Internal server error"}},
 )
 async def api_delete_beer(beer_id: int, beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade)):
@@ -76,7 +76,7 @@ async def api_delete_beer(beer_id: int, beer_cap_facade: BeerCapFacade = Depends
     if not deleted:
         raise HTTPException(status_code=404, detail="Beer not found.")
 
-    return DeleteStatusResponse(success=True, message="Beer deleted successfully.")
+    return StatusResponse(success=True, message="Beer deleted successfully.")
 
 
 @router.patch(

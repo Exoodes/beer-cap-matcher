@@ -106,6 +106,9 @@ async def update_beer_cap(
     if update_data.variant_name is not None:
         beer_cap.variant_name = update_data.variant_name
 
+    if update_data.beer_id is not None:
+        beer_cap.beer_id = update_data.beer_id
+
     await session.commit()
     await session.refresh(beer_cap)
     return beer_cap

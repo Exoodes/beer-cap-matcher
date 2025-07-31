@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponse, BeerResponse
 from src.api.schemas.beer_cap.update_schema import BeerCapUpdateSchema
-from src.api.schemas.common.delete_status_response import DeleteStatusResponse
+from src.api.schemas.common.delete_status_response import StatusResponse
 from src.db.crud.beer_cap import get_all_beer_caps, get_beer_cap_by_id, get_beer_caps_by_beer_id, update_beer_cap
 from src.dependencies.db import get_db_session
 from src.dependencies.facades import get_beer_cap_facade
@@ -139,7 +139,7 @@ async def get_beer_cap(
 
 @router.delete(
     "/{beer_cap_id}/",
-    response_model=DeleteStatusResponse,
+    response_model=StatusResponse,
     responses={404: {"description": "Beer cap not found"}, 500: {"description": "Internal server error"}},
 )
 async def delete_beer_cap(
@@ -154,7 +154,7 @@ async def delete_beer_cap(
     if not success:
         raise HTTPException(status_code=404, detail="Beer cap not found.")
 
-    return DeleteStatusResponse(
+    return StatusResponse(
         success=True,
         message="Beer cap and its augmented caps deleted successfully.",
     )

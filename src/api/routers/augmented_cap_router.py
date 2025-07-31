@@ -1,16 +1,18 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.params import Depends
 
-from src.api.schemas.common.delete_status_response import DeleteStatusResponse
+from src.api.schemas.common.delete_status_response import StatusResponse
 from src.dependencies.facades import get_beer_cap_facade
+from src.dependencies.services import get_cap_detection_service
 from src.facades.beer_cap_facade import BeerCapFacade
+from src.services.cap_detection_service import CapDetectionService
 
 router = APIRouter(prefix="/augmented_caps", tags=["Augmented Caps"])
 
 
 @router.delete(
     "/{cap_id}/",
-    response_model=DeleteStatusResponse,
+    response_model=StatusResponse,
     responses={404: {"description": "Cap not found"}, 500: {"description": "Internal server error"}},
 )
 async def delete_augmented_cap(cap_id: int, beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade)):
@@ -20,13 +22,26 @@ async def delete_augmented_cap(cap_id: int, beer_cap_facade: BeerCapFacade = Dep
     success = await beer_cap_facade.delete_augmented_caps(cap_id)
     if not success:
         raise HTTPException(status_code=404, detail="Cap not found")
-    return DeleteStatusResponse(success=True, message="Augmented cap deleted")
+    return StatusResponse(success=True, message="Augmented cap deleted")
 
 
-@router.delete("/", response_model=DeleteStatusResponse, responses={500: {"description": "Internal server error"}})
+@router.delete("/", response_model=StatusResponse, responses={500: {"description": "Internal server error"}})
 async def delete_all_augmented_caps(beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade)):
     """
     Delete all augmented caps.
     """
     deleted_count = await beer_cap_facade.delete_all_augmented_caps()
-    return DeleteStatusResponse(success=True, message=f"Deleted {deleted_count} augmented caps")
+    return StatusResponse(success=True, message=f"Deleted {deleted_count} augmented caps")
+
+
+@router.post(
+    "/generate_all/",
+    response_model=StatusResponse,
+    responses={500: {"description": "Internal server error"}},
+)
+async def generate_all_augmented_caps(cap_detection_service: CapDetectionService = Depends(get_cap_detection_service)):
+    """
+    Generate all augmented images for caps.
+    """
+    generated_count = await cap_detection_service.preprocess()
+    return StatusResponse(success=True, message=f"Generated {generated_count} augmented images")
