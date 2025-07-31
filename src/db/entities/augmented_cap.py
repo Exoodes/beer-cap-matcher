@@ -1,4 +1,5 @@
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import Column, Float, ForeignKey, Integer, String
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship
 
 from src.db.entities import Base
@@ -10,7 +11,7 @@ class AugmentedCap(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     s3_key = Column(String, nullable=False, unique=True)
-    embedding_vector = Column(String, nullable=True)
+    embedding_vector = Column(ARRAY(Float), nullable=True)
 
     beer_cap_id = Column(Integer, ForeignKey("beer_caps.id", ondelete="CASCADE"), nullable=False)
     beer_cap = relationship("BeerCap", back_populates="augmented_caps")

@@ -1,13 +1,37 @@
+from typing import List
+
 from fastapi import APIRouter, HTTPException
 from fastapi.params import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.schemas.augmented_beer_cap.augmented_beer_cap_response import AugmentedBeerCapResponse
 from src.api.schemas.common.delete_status_response import StatusResponse
+from src.db.crud.augmented_cap import get_all_augmented_caps
+from src.dependencies.db import get_db_session
 from src.dependencies.facades import get_beer_cap_facade
 from src.dependencies.services import get_cap_detection_service
 from src.facades.beer_cap_facade import BeerCapFacade
 from src.services.cap_detection_service import CapDetectionService
 
 router = APIRouter(prefix="/augmented_caps", tags=["Augmented Caps"])
+
+
+@router.get(
+    "/", response_model=List[AugmentedBeerCapResponse], responses={500: {"description": "Internal server error"}}
+)
+async def get_all_beer_caps(
+    db: AsyncSession = Depends(get_db_session),
+):
+    """
+    Retrieve all augmented beer caps.
+    """
+    augmented_caps = await get_all_augmented_caps(db)
+
+    result = []
+    for cap in augmented_caps:
+        result.append(AugmentedBeerCapResponse(id=cap.id, embedding_vector=cap.embedding_vector))
+
+    return result
 
 
 @router.delete(
@@ -45,3 +69,16 @@ async def generate_all_augmented_caps(cap_detection_service: CapDetectionService
     """
     generated_count = await cap_detection_service.preprocess()
     return StatusResponse(success=True, message=f"Generated {generated_count} augmented images")
+
+
+@router.post(
+    "/generate_embeddings/",
+    response_model=StatusResponse,
+    responses={500: {"description": "Internal server error"}},
+)
+async def generate_embeddings(cap_detection_service: CapDetectionService = Depends(get_cap_detection_service)):
+    """
+    Generate embeddings for all augmented caps.
+    """
+    embeddings_count = await cap_detection_service.generate_embeddings()
+    return StatusResponse(success=True, message=f"Generated {embeddings_count} embeddings")

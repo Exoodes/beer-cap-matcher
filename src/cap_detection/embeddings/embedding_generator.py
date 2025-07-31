@@ -1,63 +1,49 @@
-import os
-import pickle
-from typing import List
+import io
+from typing import Dict, Iterable, List, Tuple
 
 import torch
 from PIL import Image
-from tqdm import tqdm
 
-from src.embeddings.model_loader import load_model_and_preprocess
-from src.utils.constants import EMBEDDINGS_KEY, IMAGE_PATHS_KEY
+from src.cap_detection.embeddings.model_loader import load_model_and_preprocess
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 
 class EmbeddingGenerator:
-    def __init__(self, image_dir: str, output_path: str) -> None:
-        self.image_dir = image_dir
-        self.output_path = output_path
+    """Generate CLIP embeddings for images provided as bytes."""
+
+    def __init__(self) -> None:
         self.device: str = "cuda" if torch.cuda.is_available() else "cpu"
         self.model, self.preprocess = load_model_and_preprocess()
         self.model.eval()
 
-    def generate_embeddings(self) -> None:
-        embeddings: List[torch.Tensor] = []
-        filenames: List[str] = []
+    def generate_embeddings_from_bytes(self, images: Iterable[Tuple[str, bytes]]) -> Dict[str, List]:
+        """Generate embeddings directly from image bytes."""
+        result = {}
 
-        for filename in tqdm(os.listdir(self.image_dir), desc="Generating embeddings"):
-            if not filename.lower().endswith((".png", ".jpg", ".jpeg", ".bmp")):
-                continue
-
-            image_path = os.path.join(self.image_dir, filename)
+        for filename, data in images:
             try:
-                image = Image.open(image_path)
-
-                if image.mode == "RGBA":
-                    background = Image.new("RGBA", image.size, (255, 255, 255, 255))
-                    image = Image.alpha_composite(background, image).convert("RGB")
-                else:
-                    image = image.convert("RGB")
-
-                image_tensor = self.preprocess(image).unsqueeze(0).to(self.device)
-
-                with torch.no_grad():
-                    embedding = self.model.encode_image(image_tensor)
-                    embedding = embedding.squeeze(0).cpu()
-
-                embeddings.append(embedding)
-                filenames.append(filename)
-
+                result[filename] = self.generate_embeddings(data)
             except Exception as e:
                 logger.warning(f"Failed to process {filename}: {e}")
 
-        self.save_embeddings(embeddings, filenames)
+        return result
 
-    def save_embeddings(self, embeddings: List[torch.Tensor], filenames: List[str]) -> None:
-        os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
+    def generate_embeddings(self, bytes: bytes) -> torch.Tensor:
+        """Generate embeddings directly from image bytes."""
+        image = Image.open(io.BytesIO(bytes))
 
-        data = {EMBEDDINGS_KEY: embeddings, IMAGE_PATHS_KEY: filenames}
-        with open(self.output_path, "wb") as f:
-            pickle.dump(data, f)
+        if image.mode == "RGBA":
+            background = Image.new("RGBA", image.size, (255, 255, 255, 255))
+            image = Image.alpha_composite(background, image).convert("RGB")
+        else:
+            image = image.convert("RGB")
 
-        logger.info(f"Saved {len(embeddings)} embeddings to {self.output_path}")
+        image_tensor = self.preprocess(image).unsqueeze(0).to(self.device)
+
+        with torch.no_grad():
+            embedding = self.model.encode_image(image_tensor)
+            embedding = embedding.squeeze(0).cpu()
+
+        return embedding

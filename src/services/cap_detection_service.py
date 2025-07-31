@@ -1,3 +1,4 @@
+import asyncio
 import io
 import os
 from pathlib import Path
@@ -6,9 +7,10 @@ from typing import Awaitable, Callable, List
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.cap_detection.embeddings.embedding_generator import EmbeddingGenerator
 from src.cap_detection.preprocessing.background_remover import BackgroundRemover
 from src.cap_detection.preprocessing.image_processor import ImageAugmenter
-from src.db.crud.augmented_cap import create_augmented_cap
+from src.db.crud.augmented_cap import create_augmented_cap, get_all_augmented_caps
 from src.db.crud.beer_cap import get_all_beer_caps
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
 from src.storage.minio_client import MinioClientWrapper
@@ -45,6 +47,8 @@ class CapDetectionService:
             augmentations_per_image=self.augmentations_per_image,
         )
 
+        self.embedding_generator = EmbeddingGenerator()
+
     async def preprocess(self) -> int:
         """Download caps, augment them and upload results back to storage."""
         created = 0
@@ -67,3 +71,25 @@ class CapDetectionService:
             await session.commit()
 
         return created
+
+    async def generate_embeddings(self) -> dict:
+        """Generate embeddings for augmented beer caps."""
+
+        async with self.session_maker() as session:
+            augmented_caps = await get_all_augmented_caps(session)
+
+            for aug_cap in augmented_caps:
+                aug_bytes = await asyncio.to_thread(
+                    self.minio_wrapper.download_bytes,
+                    self.augmented_caps_bucket,
+                    aug_cap.s3_key,
+                )
+                embedding_tensor = await asyncio.to_thread(
+                    self.embedding_generator.generate_embeddings,
+                    aug_bytes,
+                )
+
+                aug_cap.embedding_vector = embedding_tensor.tolist()
+
+            await session.commit()
+            return {"updated_embeddings": len(augmented_caps)}
