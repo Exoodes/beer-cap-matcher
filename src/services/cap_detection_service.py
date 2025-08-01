@@ -1,8 +1,10 @@
 import asyncio
 import io
 import os
+import pickle
+import tempfile
 from pathlib import Path
-from typing import Awaitable, Callable, List
+from typing import Awaitable, Callable, List, Tuple
 
 import faiss
 from dotenv import load_dotenv
@@ -12,9 +14,11 @@ from src.cap_detection.embeddings.embedding_generator import EmbeddingGenerator
 from src.cap_detection.indexer.index_builder import IndexBuilder
 from src.cap_detection.preprocessing.background_remover import BackgroundRemover
 from src.cap_detection.preprocessing.image_processor import ImageAugmenter
+from src.cap_detection.similarity.image_querier import AggregatedResult, ImageQuerier
 from src.db.crud.augmented_cap import create_augmented_cap, get_all_augmented_caps
-from src.db.crud.beer_cap import get_all_beer_caps
+from src.db.crud.beer_cap import get_all_beer_caps, get_beer_cap_by_id
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
+from src.db.entities.beer_cap import BeerCap
 from src.storage.minio_client import MinioClientWrapper
 
 load_dotenv()
@@ -100,9 +104,8 @@ class CapDetectionService:
             await session.commit()
             return {"updated_embeddings": len(augmented_caps)}
 
-    async def generate_index(self) -> None:
-        """Generate FAISS index for augmented beer caps."""
-
+    async def generate_index(self) -> int:
+        """Generate FAISS index for augmented beer caps and store it in MinIO."""
         async with self.session_maker() as session:
             augmented_caps = await get_all_augmented_caps(session)
 
@@ -111,17 +114,20 @@ class CapDetectionService:
             for aug_cap in augmented_caps:
                 if aug_cap.embedding_vector:
                     embeddings.append(aug_cap.embedding_vector)
-                    metadata.append(aug_cap.s3_key)
+                    metadata.append(aug_cap.id)
 
             index, metadata_blob = await asyncio.to_thread(self.index_builder.build_index, embeddings, metadata)
 
-            index_bytes = faiss.serialize_index(index)
+            with tempfile.NamedTemporaryFile(suffix=".index") as tmp:
+                faiss.write_index(index, tmp.name)
+                tmp.seek(0)
+                index_data = tmp.read()
 
             self.minio_wrapper.upload_file(
                 self.index_bucket,
                 "beer-cap.index",
-                io.BytesIO(index_bytes),
-                len(index_bytes),
+                io.BytesIO(index_data),
+                len(index_data),
             )
 
             self.minio_wrapper.upload_file(
@@ -132,3 +138,57 @@ class CapDetectionService:
             )
 
             return len(embeddings)
+
+    async def get_index_with_metadata(self) -> tuple[faiss.Index, list[str]]:
+        """Download FAISS index and metadata from MinIO and return them."""
+        index_bytes = await asyncio.to_thread(
+            self.minio_wrapper.download_bytes,
+            self.index_bucket,
+            "beer-cap.index",
+        )
+
+        metadata_blob = await asyncio.to_thread(
+            self.minio_wrapper.download_bytes,
+            self.index_bucket,
+            "beer-cap.metadata.pkl",
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".index") as tmp:
+            tmp.write(index_bytes)
+            tmp.flush()
+            index = faiss.read_index(tmp.name)
+
+        metadata = pickle.loads(metadata_blob)
+        return index, metadata
+
+    async def query_image(
+        self,
+        image_bytes: bytes,
+        top_k: int = 3,
+        faiss_k: int = 10000,
+    ) -> Tuple[List[BeerCap], List[AggregatedResult]]:
+        """Query the FAISS index with an image."""
+        index, metadata = await self.get_index_with_metadata()
+
+        async with self.session_maker() as session:
+            augmented_caps = await get_all_augmented_caps(session)
+
+        augmented_cap_to_cap = {aug.id: aug.beer_cap_id for aug in augmented_caps}
+
+        querier = ImageQuerier(
+            index=index,
+            metadata=metadata,
+            augmented_cap_to_cap=augmented_cap_to_cap,
+            u2net_model_path=self.u2net_model_path,
+        )
+
+        results = querier.query(image_bytes=image_bytes, top_k=top_k, faiss_k=faiss_k)
+        caps = []
+
+        async with self.session_maker() as session:
+            for cap_id in results.keys():
+                cap = await get_beer_cap_by_id(session, cap_id)
+                assert cap is not None, f"Cap with ID {cap_id} not found"
+                caps.append(cap)
+
+        return caps, [result for result in results.values()]

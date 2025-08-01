@@ -13,9 +13,7 @@ class IndexBuilder:
     def __init__(self):
         pass  # No need for paths anymore
 
-    def build_index(
-        self, embeddings: List[List[float]], metadata: List[str]  # e.g. s3 keys or IDs matching the embeddings
-    ) -> tuple[faiss.IndexFlatIP, bytes]:
+    def build_index(self, embeddings: List[List[float]], metadata: List[int]) -> tuple[faiss.IndexFlatIP, bytes]:
         """
         Build a FAISS index from in-memory data.
 

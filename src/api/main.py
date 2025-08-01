@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routers import augmented_cap_router, beer_cap_router, beer_router
+from src.api.routers import augmented_cap_router, beer_cap_router, beer_router, similarity_router
 
 app = FastAPI(title="Beer Cap API")
 
@@ -18,6 +18,7 @@ app.router.redirect_slashes = True
 app.include_router(beer_cap_router.router)
 app.include_router(beer_router.router)
 app.include_router(augmented_cap_router.router)
+app.include_router(similarity_router.router)
 
 if __name__ == "__main__":
     import uvicorn
