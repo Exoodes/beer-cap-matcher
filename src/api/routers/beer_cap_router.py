@@ -4,12 +4,12 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.dependencies.db import get_db_session
+from src.api.dependencies.facades import get_beer_cap_facade
 from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponse, BeerResponse
 from src.api.schemas.beer_cap.update_schema import BeerCapUpdateSchema
 from src.api.schemas.common.delete_status_response import StatusResponse
 from src.db.crud.beer_cap import get_all_beer_caps, get_beer_cap_by_id, get_beer_caps_by_beer_id, update_beer_cap
-from src.dependencies.db import get_db_session
-from src.dependencies.facades import get_beer_cap_facade
 from src.facades.beer_cap_facade import BeerCapFacade
 from src.schemas.beer_cap_schema import BeerCapCreateSchema
 
