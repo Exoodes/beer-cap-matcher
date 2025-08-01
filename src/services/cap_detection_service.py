@@ -10,11 +10,11 @@ import faiss
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.cap_detection.embeddings.embedding_generator import EmbeddingGenerator
-from src.cap_detection.indexer.index_builder import IndexBuilder
-from src.cap_detection.preprocessing.background_remover import BackgroundRemover
-from src.cap_detection.preprocessing.image_processor import ImageAugmenter
-from src.cap_detection.similarity.image_querier import AggregatedResult, ImageQuerier
+from src.cap_detection.background_remover import BackgroundRemover
+from src.cap_detection.embedding_generator import EmbeddingGenerator
+from src.cap_detection.image_processor import ImageAugmenter
+from src.cap_detection.image_querier import AggregatedResult, ImageQuerier
+from src.cap_detection.index_builder import IndexBuilder
 from src.db.crud.augmented_cap import create_augmented_cap, get_all_augmented_caps
 from src.db.crud.beer_cap import get_all_beer_caps, get_beer_cap_by_id
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER

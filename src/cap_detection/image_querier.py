@@ -8,9 +8,9 @@ import numpy as np
 import torch
 from PIL import Image
 
-from src.cap_detection.embeddings.model_loader import load_model_and_preprocess
-from src.cap_detection.preprocessing.augmentation import crop_transparent
-from src.cap_detection.preprocessing.background_remover import BackgroundRemover
+from src.cap_detection.augmentation import crop_transparent
+from src.cap_detection.background_remover import BackgroundRemover
+from src.cap_detection.model_loader import load_model_and_preprocess
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)

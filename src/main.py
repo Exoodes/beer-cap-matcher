@@ -5,11 +5,11 @@ from typing import List, Optional
 
 from dotenv import load_dotenv
 
-from src.cap_detection.embeddings.embedding_generator import EmbeddingGenerator
-from src.cap_detection.indexer.index_builder import IndexBuilder
+from src.cap_detection.embedding_generator import EmbeddingGenerator
+from src.cap_detection.image_querier import AggregatedResult, ImageQuerier
+from src.cap_detection.index_builder import IndexBuilder
 from src.cap_detection.indexer.index_loader import IndexLoader
 from src.cap_detection.preprocessing.image_processor import ImageAugmenter
-from src.cap_detection.similarity.image_querier import AggregatedResult, ImageQuerier
 from src.scripts.download_u2net import download_u2net_model
 from src.utils.logger import get_logger
 

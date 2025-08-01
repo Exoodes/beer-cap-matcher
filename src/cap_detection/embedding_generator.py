@@ -4,7 +4,7 @@ from typing import Dict, Iterable, List, Tuple
 import torch
 from PIL import Image
 
-from src.cap_detection.embeddings.model_loader import load_model_and_preprocess
+from src.cap_detection.model_loader import load_model_and_preprocess
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)

@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 from PIL import Image
 
-from src.cap_detection.preprocessing.background_remover import BackgroundRemover
+from src.cap_detection.background_remover import BackgroundRemover
 from src.utils.logger import get_logger
 
 from .augmentation import crop_transparent, get_augmentation_pipeline
