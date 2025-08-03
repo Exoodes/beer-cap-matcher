@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, UploadFile
 
 from src.api.dependencies.facades import get_beer_cap_facade
 from src.api.dependencies.services import get_cap_detection_service
@@ -18,11 +18,13 @@ router = APIRouter(prefix="/similarity", tags=["Similarity"])
 )
 async def query_image(
     file: UploadFile = File(...),
+    top_k: Optional[int] = 3,
+    faiss_k: Optional[int] = 10000,
     cap_detection_service: CapDetectionService = Depends(get_cap_detection_service),
     beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
 ):
     image_bytes = await file.read()
-    caps, query_results = await cap_detection_service.query_image(image_bytes=image_bytes)
+    caps, query_results = await cap_detection_service.query_image(image_bytes=image_bytes, top_k=top_k, faiss_k=faiss_k)
 
     assert len(caps) == len(query_results), "Mismatch between caps and query results length"
 

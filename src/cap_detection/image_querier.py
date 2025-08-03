@@ -31,6 +31,7 @@ class ImageQuerier:
         metadata: List[int],
         augmented_cap_to_cap: Dict[str, int],
         u2net_model_path: str,
+        image_size: Tuple[int, int] = (224, 224),
     ):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model, self.preprocess = load_model_and_preprocess()
@@ -39,6 +40,7 @@ class ImageQuerier:
         self.metadata = metadata
         self.augmented_cap_to_cap = augmented_cap_to_cap
         self.background_remover = BackgroundRemover(model_path=u2net_model_path)
+        self.image_size = image_size
 
     def query(
         self,
@@ -65,7 +67,8 @@ class ImageQuerier:
 
         image_array = np.array(image)
         rgb = image_array[..., :3] if image_array.shape[-1] == 4 else image_array
-        image_pil = Image.fromarray(rgb)
+        image_pil = Image.fromarray(rgb).resize(self.image_size, Image.LANCZOS)
+
         image_tensor = self.preprocess(image_pil).unsqueeze(0).to(self.device)
         return image_tensor
 

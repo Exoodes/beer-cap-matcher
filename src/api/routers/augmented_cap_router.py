@@ -63,11 +63,13 @@ async def delete_all_augmented_caps(beer_cap_facade: BeerCapFacade = Depends(get
     response_model=StatusResponse,
     responses={500: {"description": "Internal server error"}},
 )
-async def generate_all_augmented_caps(cap_detection_service: CapDetectionService = Depends(get_cap_detection_service)):
+async def generate_all_augmented_caps(
+    augmentations_per_image: int, cap_detection_service: CapDetectionService = Depends(get_cap_detection_service)
+):
     """
     Generate all augmented images for caps.
     """
-    generated_count = await cap_detection_service.preprocess()
+    generated_count = await cap_detection_service.preprocess(augmentations_per_image)
     return StatusResponse(success=True, message=f"Generated {generated_count} augmented images")
 
 

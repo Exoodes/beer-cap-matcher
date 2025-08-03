@@ -22,14 +22,18 @@ class ImageAugmenter:
     ):
         self.augmentations_per_image = augmentations_per_image
         self.pipeline = get_augmentation_pipeline(image_size=image_size)
+        self.image_size = image_size
         self.background_remover = BackgroundRemover(model_path=u2net_model_path)
 
     def augment_image_bytes(self, image_bytes: bytes) -> List[bytes]:
-        """Augment a single image provided as bytes and return a mapping of filenames to image bytes."""
+        """Augment a single image provided as bytes and return a list of augmented image bytes (including the original)."""
 
         img_pil = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
         img_pil = self.background_remover.remove_background(img_pil)
         img_pil = crop_transparent(img_pil)
+
+        img_pil = img_pil.resize(self.image_size, Image.LANCZOS)
+
         img_array = np.array(img_pil)
 
         if img_array.shape[-1] == 4:
@@ -48,7 +52,7 @@ class ImageAugmenter:
 
         results.append(to_bytes(np.dstack([rgb, alpha])))
 
-        for i in range(self.augmentations_per_image):
+        for _ in range(self.augmentations_per_image):
             augmented = self.pipeline(image=rgb, alpha=alpha)
             aug_rgb = augmented["image"]
             aug_alpha = augmented["alpha"]

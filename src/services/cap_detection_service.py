@@ -10,7 +10,6 @@ import faiss
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.cap_detection.background_remover import BackgroundRemover
 from src.cap_detection.embedding_generator import EmbeddingGenerator
 from src.cap_detection.image_processor import ImageAugmenter
 from src.cap_detection.image_querier import AggregatedResult, ImageQuerier
@@ -50,16 +49,10 @@ class CapDetectionService:
         if not self.u2net_model_path:
             raise ValueError("U2NET_MODEL_PATH must be provided or set in .env")
 
-        self.augmentations_per_image = augmentations_per_image or int(os.getenv("AUGMENTATIONS_PER_IMAGE", 1))
-        self.augmenter = ImageAugmenter(
-            u2net_model_path=Path(self.u2net_model_path),
-            augmentations_per_image=self.augmentations_per_image,
-        )
-
         self.embedding_generator = EmbeddingGenerator()
         self.index_builder = IndexBuilder()
 
-    async def preprocess(self) -> int:
+    async def preprocess(self, augmentations_per_image: int) -> int:
         """Download caps, augment them and upload results back to storage."""
         created = 0
 
@@ -68,7 +61,8 @@ class CapDetectionService:
 
             for cap in beer_caps:
                 original_bytes = self.minio_wrapper.download_bytes(self.original_caps_bucket, cap.s3_key)
-                augmented_images = self.augmenter.augment_image_bytes(original_bytes)
+                augmenter = ImageAugmenter(Path(self.u2net_model_path), augmentations_per_image)
+                augmented_images = augmenter.augment_image_bytes(original_bytes)
 
                 for idx, aug_bytes in enumerate(augmented_images):
                     object_name = f"{Path(cap.s3_key).stem}_aug_{idx:03d}.png"
