@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_update import BeerCapUpdateSchema
-from src.db.entities.beer_cap import BeerCap
+from src.db.entities.beer_cap_entity import BeerCap
 
 
 async def create_beer_cap(

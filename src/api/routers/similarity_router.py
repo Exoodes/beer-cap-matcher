@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from src.api.dependencies.facades import get_beer_cap_facade
 from src.api.dependencies.services import get_cap_detection_service
 from src.api.schemas.similarity.query_response import BeerCapResponseWithQueryResult, QueryResultResponse
-from src.facades.beer_cap_facade import BeerCapFacade
+from src.services.beer_cap_facade import BeerCapFacade
 from src.services.cap_detection_service import CapDetectionService
 
 router = APIRouter(prefix="/similarity", tags=["Similarity"])

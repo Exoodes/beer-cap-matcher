@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.api.schemas.beer.beer_update import BeerUpdateSchema
-from src.db.entities.beer import Beer
+from src.db.entities.beer_entity import Beer
 
 
 async def create_beer(session: AsyncSession, name: str, commit: bool = True) -> Beer:

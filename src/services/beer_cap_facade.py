@@ -6,12 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas.augmented_beer_cap.augmented_cap_update import AugmentedCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
-from src.db.crud.augmented_cap import create_augmented_cap, delete_augmented_cap, get_all_augmented_caps
-from src.db.crud.beer import create_beer, get_beer_by_id
-from src.db.crud.beer_cap import create_beer_cap, get_beer_cap_by_id
+from src.db.crud.augmented_cap_crud import create_augmented_cap, delete_augmented_cap, get_all_augmented_caps
+from src.db.crud.beer_cap_crud import create_beer_cap, get_beer_cap_by_id
+from src.db.crud.beer_crud import create_beer, get_beer_by_id
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
-from src.db.entities.augmented_cap import AugmentedCap
-from src.db.entities.beer_cap import BeerCap
+from src.db.entities.augmented_cap_entity import AugmentedCap
+from src.db.entities.beer_cap_entity import BeerCap
 from src.storage.minio_client import MinioClientWrapper
 
 load_dotenv()

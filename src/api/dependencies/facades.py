@@ -1,7 +1,7 @@
 from fastapi import Depends
 
 from src.api.dependencies.minio import get_minio_client
-from src.facades.beer_cap_facade import BeerCapFacade
+from src.services.beer_cap_facade import BeerCapFacade
 from src.storage.minio_client import MinioClientWrapper
 
 

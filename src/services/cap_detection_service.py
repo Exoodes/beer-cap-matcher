@@ -15,10 +15,10 @@ from src.cap_detection.embedding_generator import EmbeddingGenerator
 from src.cap_detection.image_processor import ImageAugmenter
 from src.cap_detection.image_querier import AggregatedResult, ImageQuerier
 from src.cap_detection.index_builder import IndexBuilder
-from src.db.crud.augmented_cap import create_augmented_cap, get_all_augmented_caps
-from src.db.crud.beer_cap import get_all_beer_caps, get_beer_cap_by_id
+from src.db.crud.augmented_cap_crud import create_augmented_cap, get_all_augmented_caps
+from src.db.crud.beer_cap_crud import get_all_beer_caps, get_beer_cap_by_id
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
-from src.db.entities.beer_cap import BeerCap
+from src.db.entities.beer_cap_entity import BeerCap
 from src.storage.minio_client import MinioClientWrapper
 
 load_dotenv()

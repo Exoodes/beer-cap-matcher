@@ -2,9 +2,9 @@ import asyncio
 
 from dotenv import load_dotenv
 
-import src.db.entities.augmented_cap as _
-import src.db.entities.beer as _
-import src.db.entities.beer_cap as _
+import src.db.entities.augmented_cap_entity as _
+import src.db.entities.beer_cap_entity as _
+import src.db.entities.beer_entity as _
 from src.db.database import GLOBAL_ENGINE
 from src.db.entities import Base
 

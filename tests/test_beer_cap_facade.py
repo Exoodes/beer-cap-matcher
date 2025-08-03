@@ -7,10 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas.augmented_beer_cap.augmented_cap_update import AugmentedCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
-from src.db.crud.augmented_cap import get_all_augmented_caps, get_augmented_cap_by_id
-from src.db.crud.beer import get_beer_by_id
-from src.db.crud.beer_cap import get_beer_cap_by_id
-from src.facades.beer_cap_facade import BeerCapFacade
+from src.db.crud.augmented_cap_crud import get_all_augmented_caps, get_augmented_cap_by_id
+from src.db.crud.beer_cap_crud import get_beer_cap_by_id
+from src.db.crud.beer_crud import get_beer_by_id
+from src.services.beer_cap_facade import BeerCapFacade
 from tests.conftest import TEST_IMAGE_CONTENT_TYPE, TEST_MINIO_ENDPOINT
 
 

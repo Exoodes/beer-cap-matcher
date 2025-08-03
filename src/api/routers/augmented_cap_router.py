@@ -9,8 +9,8 @@ from src.api.dependencies.facades import get_beer_cap_facade
 from src.api.dependencies.services import get_cap_detection_service
 from src.api.schemas.augmented_beer_cap.augmented_beer_cap_response import AugmentedBeerCapResponse
 from src.api.schemas.common.status_response import StatusResponse
-from src.db.crud.augmented_cap import get_all_augmented_caps
-from src.facades.beer_cap_facade import BeerCapFacade
+from src.db.crud.augmented_cap_crud import get_all_augmented_caps
+from src.services.beer_cap_facade import BeerCapFacade
 from src.services.cap_detection_service import CapDetectionService
 
 router = APIRouter(prefix="/augmented_caps", tags=["Augmented Caps"])

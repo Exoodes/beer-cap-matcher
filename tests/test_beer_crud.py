@@ -1,8 +1,8 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.crud.beer import create_beer, delete_beer, get_all_beers, get_beer_by_id
-from src.db.entities.beer import Beer
+from src.db.crud.beer_crud import create_beer, delete_beer, get_all_beers, get_beer_by_id
+from src.db.entities.beer_entity import Beer
 
 
 @pytest.mark.asyncio

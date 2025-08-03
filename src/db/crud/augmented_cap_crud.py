@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.db.entities.augmented_cap import AugmentedCap
+from src.db.entities.augmented_cap_entity import AugmentedCap
 
 
 async def create_augmented_cap(session: AsyncSession, beer_cap_id: int, s3_key: str) -> AugmentedCap:

@@ -10,8 +10,8 @@ from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponseWithUrl, BeerResponseBase
 from src.api.schemas.beer_cap.beer_cap_update import BeerCapUpdateSchema
 from src.api.schemas.common.status_response import StatusResponse
-from src.db.crud.beer_cap import get_all_beer_caps, get_beer_cap_by_id, get_beer_caps_by_beer_id, update_beer_cap
-from src.facades.beer_cap_facade import BeerCapFacade
+from src.db.crud.beer_cap_crud import get_all_beer_caps, get_beer_cap_by_id, get_beer_caps_by_beer_id, update_beer_cap
+from src.services.beer_cap_facade import BeerCapFacade
 
 router = APIRouter(prefix="/beer_caps", tags=["Beer Caps"])
 
