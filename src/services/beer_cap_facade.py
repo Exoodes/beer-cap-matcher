@@ -12,7 +12,7 @@ from src.db.crud.beer_crud import create_beer, get_beer_by_id
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
 from src.db.entities.augmented_cap_entity import AugmentedCap
 from src.db.entities.beer_cap_entity import BeerCap
-from src.storage.minio_client import MinioClientWrapper
+from src.storage.minio.minio_client import MinioClientWrapper
 
 load_dotenv()
 

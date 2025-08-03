@@ -27,11 +27,11 @@ api:
 	uvicorn src.api.api_runner:app --reload --host 0.0.0.0 --port 8000
 
 setup-postgres:
-	python -m src.scripts.create_tables
+	python -m scripts.create_tables
 	@echo "✅ PostgreSQL tables ensured."
 
 setup-minio:
-	python -m src.scripts.setup_minio
+	python -m scripts.setup_minio
 	@echo "✅ MinIO buckets ensured."
 
 setup-all: setup-postgres setup-minio

@@ -2,7 +2,7 @@ from fastapi import Depends
 
 from src.api.dependencies.minio import get_minio_client
 from src.services.cap_detection_service import CapDetectionService
-from src.storage.minio_client import MinioClientWrapper
+from src.storage.minio.minio_client import MinioClientWrapper
 
 
 def get_cap_detection_service(minio_client: MinioClientWrapper = Depends(get_minio_client)):

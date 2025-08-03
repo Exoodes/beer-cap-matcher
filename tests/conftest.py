@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.database import get_db_resources
 from src.db.entities import Base
-from src.storage.minio_client import MinioClientWrapper
+from src.storage.minio.minio_client import MinioClientWrapper
 
 load_dotenv()
 
