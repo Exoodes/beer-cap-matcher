@@ -12,7 +12,7 @@ from src.api.schemas.beer.beer_update import BeerUpdateSchema
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponseWithUrl
 from src.api.schemas.beer_cap.beer_cap_response_base import BeerCapResponseBase
-from src.api.schemas.common.delete_status_response import StatusResponse
+from src.api.schemas.common.status_response import StatusResponse
 from src.db.crud.beer import get_all_beers, get_beer_by_id, update_beer
 from src.facades.beer_cap_facade import BeerCapFacade
 
