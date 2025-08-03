@@ -6,19 +6,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies.db import get_db_session
 from src.api.dependencies.facades import get_beer_cap_facade
-from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponse, BeerResponse
-from src.api.schemas.beer_cap.update_schema import BeerCapUpdateSchema
+from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
+from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponseWithUrl, BeerResponseBase
+from src.api.schemas.beer_cap.beer_cap_update import BeerCapUpdateSchema
 from src.api.schemas.common.delete_status_response import StatusResponse
 from src.db.crud.beer_cap import get_all_beer_caps, get_beer_cap_by_id, get_beer_caps_by_beer_id, update_beer_cap
 from src.facades.beer_cap_facade import BeerCapFacade
-from src.schemas.beer_cap_schema import BeerCapCreateSchema
 
 router = APIRouter(prefix="/beer_caps", tags=["Beer Caps"])
 
 
 @router.post(
     "/",
-    response_model=BeerCapResponse,
+    response_model=BeerCapResponseWithUrl,
     responses={422: {"description": "Validation Error"}, 500: {"description": "Internal server error"}},
 )
 async def create_cap_with_new_beer(
@@ -40,9 +40,9 @@ async def create_cap_with_new_beer(
     )
 
     url = beer_cap_facade.get_presigned_url_for_cap(beer_cap.s3_key)
-    beer_response = BeerResponse(id=beer_cap.beer_id, name=beer_cap.beer.name)
+    beer_response = BeerResponseBase(id=beer_cap.beer_id, name=beer_cap.beer.name)
 
-    return BeerCapResponse(
+    return BeerCapResponseWithUrl(
         id=beer_cap.id,
         variant_name=beer_cap.variant_name,
         presigned_url=url,
@@ -50,7 +50,7 @@ async def create_cap_with_new_beer(
     )
 
 
-@router.get("/", response_model=List[BeerCapResponse], responses={500: {"description": "Internal server error"}})
+@router.get("/", response_model=List[BeerCapResponseWithUrl], responses={500: {"description": "Internal server error"}})
 async def api_get_all_beer_caps(
     beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
     db: AsyncSession = Depends(get_db_session),
@@ -63,9 +63,9 @@ async def api_get_all_beer_caps(
     result = []
     for beer_cap in beer_caps:
         url = beer_cap_facade.get_presigned_url_for_cap(beer_cap.s3_key)
-        beer_response = BeerResponse(id=beer_cap.beer_id, name=beer_cap.beer.name)
+        beer_response = BeerResponseBase(id=beer_cap.beer_id, name=beer_cap.beer.name)
         result.append(
-            BeerCapResponse(
+            BeerCapResponseWithUrl(
                 id=beer_cap.id,
                 variant_name=beer_cap.variant_name,
                 presigned_url=url,
@@ -77,7 +77,7 @@ async def api_get_all_beer_caps(
 
 @router.get(
     "/by_beer/{beer_id}/",
-    response_model=List[BeerCapResponse],
+    response_model=List[BeerCapResponseWithUrl],
     responses={404: {"description": "No beer caps found for this beer"}, 500: {"description": "Internal server error"}},
 )
 async def get_all_caps_from_beer(
@@ -96,9 +96,9 @@ async def get_all_caps_from_beer(
     result = []
     for beer_cap in beer_caps:
         url = beer_cap_facade.get_presigned_url_for_cap(beer_cap.s3_key)
-        beer_response = BeerResponse(id=beer_cap.beer_id, name=beer_cap.beer.name)
+        beer_response = BeerResponseBase(id=beer_cap.beer_id, name=beer_cap.beer.name)
         result.append(
-            BeerCapResponse(
+            BeerCapResponseWithUrl(
                 id=beer_cap.id,
                 variant_name=beer_cap.variant_name,
                 presigned_url=url,
@@ -110,7 +110,7 @@ async def get_all_caps_from_beer(
 
 @router.get(
     "/{beer_cap_id}/",
-    response_model=BeerCapResponse,
+    response_model=BeerCapResponseWithUrl,
     responses={404: {"description": "Beer cap not found"}, 500: {"description": "Internal server error"}},
 )
 async def get_beer_cap(
@@ -127,9 +127,9 @@ async def get_beer_cap(
         raise HTTPException(status_code=404, detail="Beer cap not found.")
 
     url = beer_cap_facade.get_presigned_url_for_cap(beer_cap.s3_key)
-    beer_response = BeerResponse(id=beer_cap.beer_id, name=beer_cap.beer.name)
+    beer_response = BeerResponseBase(id=beer_cap.beer_id, name=beer_cap.beer.name)
 
-    return BeerCapResponse(
+    return BeerCapResponseWithUrl(
         id=beer_cap.id,
         variant_name=beer_cap.variant_name,
         presigned_url=url,
@@ -162,7 +162,7 @@ async def delete_beer_cap(
 
 @router.patch(
     "/{beer_cap_id}/",
-    response_model=BeerCapResponse,
+    response_model=BeerCapResponseWithUrl,
     responses={
         404: {"description": "Beer cap not found"},
         422: {"description": "Validation Error"},
@@ -184,9 +184,9 @@ async def update_beer_cap_endpoint(
         raise HTTPException(status_code=404, detail="Beer cap not found.")
 
     url = beer_cap_facade.get_presigned_url_for_cap(updated_cap.s3_key)
-    beer_response = BeerResponse(id=updated_cap.beer_id, name=updated_cap.beer.name)
+    beer_response = BeerResponseBase(id=updated_cap.beer_id, name=updated_cap.beer.name)
 
-    return BeerCapResponse(
+    return BeerCapResponseWithUrl(
         id=updated_cap.id,
         variant_name=updated_cap.variant_name,
         presigned_url=url,

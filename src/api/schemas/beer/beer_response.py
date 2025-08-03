@@ -1,18 +1,8 @@
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from src.api.schemas.beer.beer_response_base import BeerResponseBase
+from src.api.schemas.beer_cap.beer_cap_response_base import BeerCapResponseBase
 
 
-class BeerCapShortResponse(BaseModel):
-    id: int
-    variant_name: Optional[str] = None
-
-    model_config = ConfigDict(from_attributes=True, extra="forbid")
-
-
-class BeerResponseWithCaps(BaseModel):
-    id: int
-    name: str
-    caps: Optional[List[BeerCapShortResponse]] = None
-
-    model_config = ConfigDict(from_attributes=True, extra="forbid")
+class BeerResponseWithCaps(BeerResponseBase):
+    caps: Optional[List[BeerCapResponseBase]] = None

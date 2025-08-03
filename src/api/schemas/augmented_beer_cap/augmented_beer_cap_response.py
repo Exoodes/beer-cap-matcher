@@ -1,10 +1,5 @@
-from typing import List, Optional
-
-from pydantic import BaseModel, ConfigDict
+from src.api.schemas.augmented_beer_cap.augmented_beer_cap_response_base import AugmentedBeerCapResponseBase
 
 
-class AugmentedBeerCapResponse(BaseModel):
-    id: int
-    embedding_vector: Optional[List[float]] = None
-
-    model_config = ConfigDict(from_attributes=True, extra="forbid")
+class AugmentedBeerCapResponse(AugmentedBeerCapResponseBase):
+    pass

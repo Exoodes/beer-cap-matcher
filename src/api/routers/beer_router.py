@@ -6,13 +6,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies.db import get_db_session
 from src.api.dependencies.facades import get_beer_cap_facade
-from src.api.schemas.beer.beer_response import BeerCapShortResponse, BeerResponseWithCaps
-from src.api.schemas.beer.update_schema import BeerUpdateSchema
-from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponse, BeerResponse
+from src.api.schemas.beer.beer_response import BeerResponseWithCaps
+from src.api.schemas.beer.beer_response_base import BeerResponseBase
+from src.api.schemas.beer.beer_update import BeerUpdateSchema
+from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
+from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponseWithUrl
+from src.api.schemas.beer_cap.beer_cap_response_base import BeerCapResponseBase
 from src.api.schemas.common.delete_status_response import StatusResponse
 from src.db.crud.beer import get_all_beers, get_beer_by_id, update_beer
 from src.facades.beer_cap_facade import BeerCapFacade
-from src.schemas.beer_cap_schema import BeerCapCreateSchema
 
 router = APIRouter(prefix="/beers", tags=["Beers"])
 
@@ -30,7 +32,7 @@ async def get_all_beer_caps(
     result = []
     for beer in beers:
         caps = (
-            [BeerCapShortResponse(id=cap.id, variant_name=cap.variant_name) for cap in beer.caps]
+            [BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name) for cap in beer.caps]
             if include_caps
             else None
         )
@@ -57,7 +59,7 @@ async def api_get_beer_by_id(
         raise HTTPException(status_code=404, detail="Beer not found.")
 
     caps = (
-        [BeerCapShortResponse(id=cap.id, variant_name=cap.variant_name) for cap in beer.caps] if include_caps else None
+        [BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name) for cap in beer.caps] if include_caps else None
     )
     return BeerResponseWithCaps(id=beer.id, name=beer.name, caps=caps)
 
@@ -101,13 +103,13 @@ async def update_beer_endpoint(
     if not updated_beer:
         raise HTTPException(status_code=404, detail="Beer not found.")
 
-    caps = [BeerCapShortResponse(id=cap.id, variant_name=cap.variant_name) for cap in updated_beer.caps]
+    caps = [BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name) for cap in updated_beer.caps]
     return BeerResponseWithCaps(id=updated_beer.id, name=updated_beer.name, caps=caps)
 
 
 @router.post(
     "/{beer_id}/caps/",
-    response_model=BeerCapResponse,
+    response_model=BeerCapResponseWithUrl,
     responses={
         404: {"description": "Beer not found"},
         422: {"description": "Validation Error"},
@@ -135,9 +137,9 @@ async def create_cap_existing_beer(
         raise HTTPException(status_code=404, detail="Beer not found.")
 
     url = beer_cap_facade.get_presigned_url_for_cap(beer_cap.s3_key)
-    beer_response = BeerResponse(id=beer_cap.beer_id, name=beer_cap.beer.name)
+    beer_response = BeerResponseBase(id=beer_cap.beer_id, name=beer_cap.beer.name)
 
-    return BeerCapResponse(
+    return BeerCapResponseWithUrl(
         id=beer_cap.id,
         variant_name=beer_cap.variant_name,
         presigned_url=url,

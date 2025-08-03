@@ -1,19 +1,11 @@
-from typing import Optional
+from pydantic import ConfigDict
 
-from pydantic import BaseModel, ConfigDict
-
-
-class BeerResponse(BaseModel):
-    id: int
-    name: str
-
-    model_config = ConfigDict(from_attributes=True, extra="forbid")
+from src.api.schemas.beer.beer_response_base import BeerResponseBase
+from src.api.schemas.beer_cap.beer_cap_response_base import BeerCapResponseBase
 
 
-class BeerCapResponse(BaseModel):
-    id: int
-    variant_name: Optional[str] = None
+class BeerCapResponseWithUrl(BeerCapResponseBase):
     presigned_url: str
-    beer: BeerResponse
+    beer: BeerResponseBase
 
     model_config = ConfigDict(from_attributes=True, extra="forbid")

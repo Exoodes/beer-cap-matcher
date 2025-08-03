@@ -4,9 +4,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.api.schemas.beer_cap.update_schema import BeerCapUpdateSchema
+from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
+from src.api.schemas.beer_cap.beer_cap_update import BeerCapUpdateSchema
 from src.db.entities.beer_cap import BeerCap
-from src.schemas.beer_cap_schema import BeerCapCreateSchema
 
 
 async def create_beer_cap(
