@@ -4,8 +4,12 @@ from src.api.dependencies.minio import get_minio_client
 from src.services.cap_detection_service import CapDetectionService
 from src.storage.minio.minio_client import MinioClientWrapper
 
+_cap_detection_service: CapDetectionService | None = None
 
-def get_cap_detection_service(minio_client: MinioClientWrapper = Depends(get_minio_client)) -> CapDetectionService:
+
+async def get_cap_detection_service(
+    minio_client: MinioClientWrapper = Depends(get_minio_client),
+) -> CapDetectionService:
     """FastAPI dependency for getting the cap detection service.
 
     Args:
@@ -16,4 +20,15 @@ def get_cap_detection_service(minio_client: MinioClientWrapper = Depends(get_min
         CapDetectionService: An instance of the CapDetectionService,
             initialized with the Minio client wrapper.
     """
-    return CapDetectionService(minio_wrapper=minio_client)
+    global _cap_detection_service
+    if _cap_detection_service is None:
+        _cap_detection_service = CapDetectionService(minio_wrapper=minio_client)
+        await _cap_detection_service.load_index()
+
+    return _cap_detection_service
+
+
+def reload_cap_detection_service_index() -> None:
+    global _cap_detection_service
+    if _cap_detection_service:
+        _cap_detection_service.load_index()

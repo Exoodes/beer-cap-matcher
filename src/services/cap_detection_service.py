@@ -52,6 +52,10 @@ class CapDetectionService:
         self.embedding_generator = EmbeddingGenerator()
         self.index_builder = IndexBuilder()
 
+        self.index = None
+        self.metadata = None
+        self.querier = None
+
     async def preprocess(self, augmentations_per_image: int) -> int:
         """Download caps, augment them and upload results back to storage."""
         created = 0
@@ -133,7 +137,7 @@ class CapDetectionService:
 
             return len(embeddings)
 
-    async def get_index_with_metadata(self) -> tuple[faiss.Index, list[str]]:
+    async def load_index(self) -> None:
         """Download FAISS index and metadata from MinIO and return them."""
         index_bytes = await asyncio.to_thread(
             self.minio_wrapper.download_bytes,
@@ -153,7 +157,21 @@ class CapDetectionService:
             index = faiss.read_index(tmp.name)
 
         metadata = pickle.loads(metadata_blob)
-        return index, metadata
+
+        self.index = index
+        self.metadata = metadata
+
+        async with self.session_maker() as session:
+            augmented_caps = await get_all_augmented_caps(session)
+
+        augmented_cap_to_cap = {aug.id: aug.beer_cap_id for aug in augmented_caps}
+
+        self.querier = ImageQuerier(
+            index=self.index,
+            metadata=self.metadata,
+            augmented_cap_to_cap=augmented_cap_to_cap,
+            u2net_model_path=self.u2net_model_path,
+        )
 
     async def query_image(
         self,
@@ -162,21 +180,8 @@ class CapDetectionService:
         faiss_k: int = 10000,
     ) -> Tuple[List[BeerCap], List[AggregatedResult]]:
         """Query the FAISS index with an image."""
-        index, metadata = await self.get_index_with_metadata()
-
-        async with self.session_maker() as session:
-            augmented_caps = await get_all_augmented_caps(session)
-
-        augmented_cap_to_cap = {aug.id: aug.beer_cap_id for aug in augmented_caps}
-
-        querier = ImageQuerier(
-            index=index,
-            metadata=metadata,
-            augmented_cap_to_cap=augmented_cap_to_cap,
-            u2net_model_path=self.u2net_model_path,
-        )
-
-        results = querier.query(image_bytes=image_bytes, top_k=top_k, faiss_k=faiss_k)
+        results = self.querier.query(image_bytes=image_bytes, top_k=top_k, faiss_k=faiss_k)
+        print(f"Queried {len(results)} results")
         caps = []
 
         async with self.session_maker() as session:

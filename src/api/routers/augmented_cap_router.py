@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.constants.responses import INTERNAL_SERVER_ERROR_RESPONSE
 from src.api.dependencies.db import get_db_session
 from src.api.dependencies.facades import get_beer_cap_facade
-from src.api.dependencies.services import get_cap_detection_service
+from src.api.dependencies.services import get_cap_detection_service, reload_cap_detection_service_index
 from src.api.schemas.augmented_beer_cap.augmented_beer_cap_response import AugmentedBeerCapResponse
 from src.api.schemas.common.status_response import StatusResponse
 from src.db.crud.augmented_cap_crud import get_all_augmented_caps
@@ -32,10 +32,23 @@ async def get_all_beer_caps(
     Retrieve all augmented beer caps.
     """
     augmented_caps = await get_all_augmented_caps(db)
-    return [
-        AugmentedBeerCapResponse(id=cap.id, embedding_vector=cap.embedding_vector)
-        for cap in augmented_caps
-    ]
+    return [AugmentedBeerCapResponse(id=cap.id, embedding_vector=cap.embedding_vector) for cap in augmented_caps]
+
+
+@router.delete(
+    "/all/",
+    response_model=StatusResponse,
+    responses=INTERNAL_SERVER_ERROR_RESPONSE,
+)
+async def delete_all_augmented_caps(
+    beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
+) -> StatusResponse:
+    """
+    Delete all augmented caps.
+    """
+    deleted_count = await beer_cap_facade.delete_all_augmented_caps()
+    logger.info("Deleted %s augmented caps", deleted_count)
+    return StatusResponse(success=True, message=f"Deleted {deleted_count} augmented caps")
 
 
 @router.delete(
@@ -58,22 +71,6 @@ async def delete_augmented_cap(
         raise HTTPException(status_code=404, detail="Cap not found")
     logger.info("Deleted augmented cap with ID %s", cap_id)
     return StatusResponse(success=True, message="Augmented cap deleted")
-
-
-@router.delete(
-    "/all/",
-    response_model=StatusResponse,
-    responses=INTERNAL_SERVER_ERROR_RESPONSE,
-)
-async def delete_all_augmented_caps(
-    beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
-) -> StatusResponse:
-    """
-    Delete all augmented caps.
-    """
-    deleted_count = await beer_cap_facade.delete_all_augmented_caps()
-    logger.info("Deleted %s augmented caps", deleted_count)
-    return StatusResponse(success=True, message=f"Deleted {deleted_count} augmented caps")
 
 
 @router.post(
@@ -122,4 +119,5 @@ async def generate_index(
     """
     index_count = await cap_detection_service.generate_index()
     logger.info("Generated index for %s embeddings", index_count)
+    reload_cap_detection_service_index()
     return StatusResponse(success=True, message=f"Generated index for {index_count} embeddings")
