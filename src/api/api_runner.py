@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.middleware.log_request import LogRequestMiddleware
+from src.api.middleware.http_request_logging_middleware import LogRequestMiddleware
 from src.api.routers import augmented_cap_router, beer_cap_router, beer_router, similarity_router
 from src.utils.logger import get_logger, setup_logging
 
