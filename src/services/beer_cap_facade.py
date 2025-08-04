@@ -4,7 +4,7 @@ from typing import Awaitable, BinaryIO, Callable, Optional
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.schemas.augmented_beer_cap.augmented_cap_update import AugmentedCapCreateSchema
+from src.api.schemas.augmented_beer_cap.augmented_cap_create import AugmentedCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.db.crud.augmented_cap_crud import create_augmented_cap, delete_augmented_cap, get_all_augmented_caps
 from src.db.crud.beer_cap_crud import create_beer_cap, get_beer_cap_by_id

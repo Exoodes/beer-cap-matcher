@@ -1,13 +1,21 @@
+# year: Optional[int] = Field(None, description="Year the cap was used or produced")
+# country: Optional[str] = Field(None, description="Country of origin")
+
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class BeerCapCreateSchema(BaseModel):
-    filename: str = Field(..., description="File name of the beer cap image")
+    """
+    Schema for creating a new beer cap entry, including image filename and optional variant name.
+    """
 
-    # year: Optional[int] = Field(None, description="Year the cap was used or produced")
-    # country: Optional[str] = Field(None, description="Country of origin")
-    variant_name: Optional[str] = Field(None, description="Variant name of the beer cap")
+    filename: str = Field(
+        ..., min_length=1, max_length=255, description="File name of the beer cap image"
+    )
+    variant_name: Optional[str] = Field(
+        default=None, max_length=100, description="Variant name of the beer cap"
+    )
 
     model_config = ConfigDict(from_attributes=True)

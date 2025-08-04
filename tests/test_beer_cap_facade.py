@@ -1,11 +1,11 @@
-import io
 from contextlib import asynccontextmanager
+import io
 from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.schemas.augmented_beer_cap.augmented_cap_update import AugmentedCapCreateSchema
+from src.api.schemas.augmented_beer_cap.augmented_cap_create import AugmentedCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.db.crud.augmented_cap_crud import get_all_augmented_caps, get_augmented_cap_by_id
 from src.db.crud.beer_cap_crud import get_beer_cap_by_id

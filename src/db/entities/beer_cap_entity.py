@@ -5,6 +5,12 @@ from src.db.entities import Base
 
 
 class BeerCap(Base):
+    """Represents a physical beer cap, including its variant and image.
+
+    Linked to a specific Beer and may have multiple AugmentedCaps
+    (e.g., cropped, processed versions for AI).
+    """
+
     __tablename__ = "beer_caps"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -17,5 +23,11 @@ class BeerCap(Base):
 
     augmented_caps = relationship("AugmentedCap", back_populates="beer_cap", cascade="all, delete-orphan")
 
-    def __repr__(self):
-        return f"<BeerCap id={self.id} variant={self.variant_name} beer_id={self.beer_id}>"
+    def __repr__(self) -> str:
+        return (
+            f"<BeerCap id={self.id} variant_name='{self.variant_name}' "
+            f"beer_id={self.beer_id} s3_key='{self.s3_key}'>"
+        )
+
+    def __str__(self) -> str:
+        return f"BeerCap: {self.variant_name or 'N/A'} (ID: {self.id})"
