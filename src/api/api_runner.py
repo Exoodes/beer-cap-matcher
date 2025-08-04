@@ -1,9 +1,13 @@
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 
 from src.api.middleware.log_request import LogRequestMiddleware
 from src.api.routers import augmented_cap_router, beer_cap_router, beer_router, similarity_router
+from src.utils.logger import get_logger, setup_logging
+
+setup_logging()
+logger = get_logger(__name__)
 
 app = FastAPI(title="Beer Cap API")
 
