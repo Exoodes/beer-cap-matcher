@@ -1,9 +1,9 @@
 from contextlib import asynccontextmanager
 from typing import Any, Generator
 
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 
 from src.api.middleware.http_request_logging_middleware import LogRequestMiddleware
 from src.api.routers import augmented_cap_router, beer_cap_router, beer_router, similarity_router
@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI) -> Generator[None, Any, None]:
+async def lifespan(_: FastAPI):
     """Asynchronous context manager for the FastAPI application's lifespan.
 
     Args:
@@ -31,7 +31,7 @@ async def lifespan(_: FastAPI) -> Generator[None, Any, None]:
 
     # Initialize services
     minio_client = MinioClientWrapper()
-    query_service = QueryService()
+    query_service = QueryService(minio_wrapper=minio_client)
     await query_service.load_index()
     cap_detection_service = CapDetectionService(minio_wrapper=minio_client)
 

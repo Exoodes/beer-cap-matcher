@@ -26,13 +26,17 @@ router = APIRouter(prefix="/augmented_caps", tags=["Augmented Caps"])
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def get_all_beer_caps(
+    include_embedding_vector: bool = Query(False, description="Include embedding vector in response"),
     db: AsyncSession = Depends(get_db_session),
 ) -> List[AugmentedBeerCapResponse]:
     """
     Retrieve all augmented beer caps.
     """
     augmented_caps = await get_all_augmented_caps(db)
-    return [AugmentedBeerCapResponse(id=cap.id, embedding_vector=cap.embedding_vector) for cap in augmented_caps]
+    return [
+        AugmentedBeerCapResponse(id=cap.id, embedding_vector=cap.embedding_vector if include_embedding_vector else None)
+        for cap in augmented_caps
+    ]
 
 
 @router.delete(

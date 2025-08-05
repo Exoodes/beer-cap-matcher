@@ -12,6 +12,7 @@ from src.db.crud.augmented_cap_crud import get_all_augmented_caps
 from src.db.crud.beer_cap_crud import get_beer_cap_by_id
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
 from src.db.entities.beer_cap_entity import BeerCap
+from src.storage.minio.minio_client import MinioClientWrapper
 
 
 class QueryService:
@@ -19,12 +20,16 @@ class QueryService:
 
     def __init__(
         self,
+        minio_wrapper: MinioClientWrapper,
         session_maker: Callable[[], Awaitable[AsyncSession]] = GLOBAL_ASYNC_SESSION_MAKER,
     ) -> None:
         self.session_maker = session_maker
+        self.minio_wrapper = minio_wrapper
 
         self.index_file_name = os.getenv("MINIO_INDEX_FILE_NAME")
         self.metadata_file_name = os.getenv("MINIO_METADATA_FILE_NAME")
+        self.index_bucket = os.getenv("MINIO_INDEX_BUCKET")
+        self.u2net_model_path = os.getenv("U2NET_MODEL_PATH")
 
         self.index = None
         self.metadata = None
