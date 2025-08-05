@@ -1,34 +1,37 @@
-from fastapi import Depends
+from fastapi import Request
 
-from src.api.dependencies.minio import get_minio_client
 from src.services.cap_detection_service import CapDetectionService
-from src.storage.minio.minio_client import MinioClientWrapper
-
-_cap_detection_service: CapDetectionService | None = None
+from src.services.query_service import QueryService
 
 
-async def get_cap_detection_service(
-    minio_client: MinioClientWrapper = Depends(get_minio_client),
-) -> CapDetectionService:
-    """FastAPI dependency for getting the cap detection service.
+def get_query_service(request: Request) -> QueryService:
+    """Gets the query service from the application state.
 
     Args:
-        minio_client (MinioClientWrapper): A Minio client wrapper instance,
-            injected by FastAPI's dependency system.
+        request: The request object.
 
     Returns:
-        CapDetectionService: An instance of the CapDetectionService,
-            initialized with the Minio client wrapper.
+        The query service instance.
     """
-    global _cap_detection_service
-    if _cap_detection_service is None:
-        _cap_detection_service = CapDetectionService(minio_wrapper=minio_client)
-        await _cap_detection_service.load_index()
-
-    return _cap_detection_service
+    return request.app.state.query_service
 
 
-def reload_cap_detection_service_index() -> None:
-    global _cap_detection_service
-    if _cap_detection_service:
-        _cap_detection_service.load_index()
+def get_cap_detection_service(request: Request) -> CapDetectionService:
+    """Gets the cap detection service from the application state.
+
+    Args:
+        request: The incoming request object.
+
+    Returns:
+        An instance of the cap detection service.
+    """
+    return request.app.state.cap_detection_service
+
+
+async def reload_query_service_index(request: Request) -> None:
+    """Reloads the query service index.
+
+    Args:
+        request: The incoming request object.
+    """
+    await request.app.state.query_service.load_index()

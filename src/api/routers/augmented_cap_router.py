@@ -1,14 +1,14 @@
 import logging
 from typing import List
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.params import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.constants.responses import INTERNAL_SERVER_ERROR_RESPONSE
 from src.api.dependencies.db import get_db_session
 from src.api.dependencies.facades import get_beer_cap_facade
-from src.api.dependencies.services import get_cap_detection_service, reload_cap_detection_service_index
+from src.api.dependencies.services import get_cap_detection_service, reload_query_service_index
 from src.api.schemas.augmented_beer_cap.augmented_beer_cap_response import AugmentedBeerCapResponse
 from src.api.schemas.common.status_response import StatusResponse
 from src.db.crud.augmented_cap_crud import get_all_augmented_caps
@@ -112,6 +112,7 @@ async def generate_embeddings(
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def generate_index(
+    request: Request,
     cap_detection_service: CapDetectionService = Depends(get_cap_detection_service),
 ) -> StatusResponse:
     """
@@ -119,5 +120,7 @@ async def generate_index(
     """
     index_count = await cap_detection_service.generate_index()
     logger.info("Generated index for %s embeddings", index_count)
-    reload_cap_detection_service_index()
+
+    await reload_query_service_index(request)
+
     return StatusResponse(success=True, message=f"Generated index for {index_count} embeddings")

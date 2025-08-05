@@ -5,10 +5,10 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 
 from src.api.constants.responses import INTERNAL_SERVER_ERROR_RESPONSE
 from src.api.dependencies.facades import get_beer_cap_facade
-from src.api.dependencies.services import get_cap_detection_service
+from src.api.dependencies.services import get_query_service
 from src.api.schemas.similarity.query_response import BeerCapResponseWithQueryResult, QueryResultResponse
 from src.services.beer_cap_facade import BeerCapFacade
-from src.services.cap_detection_service import CapDetectionService
+from src.services.query_service import QueryService
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +26,9 @@ router = APIRouter(prefix="/similarity", tags=["Similarity"])
 )
 async def query_image(
     file: UploadFile = File(...),
-    top_k: int = Query(3, gt=0, le=100, description="Number of top matches to return"),
+    top_k: int = Query(3, gt=0, le=15, description="Number of top matches to return"),
     faiss_k: int = Query(10000, gt=0, description="Number of FAISS candidates to search"),
-    cap_detection_service: CapDetectionService = Depends(get_cap_detection_service),
+    query_service: QueryService = Depends(get_query_service),
     beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
 ) -> List[BeerCapResponseWithQueryResult]:
     """
@@ -46,7 +46,7 @@ async def query_image(
         faiss_k,
     )
 
-    caps, query_results = await cap_detection_service.query_image(
+    caps, query_results = await query_service.query_image(
         image_bytes=image_bytes,
         top_k=top_k,
         faiss_k=faiss_k,
