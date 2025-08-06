@@ -5,8 +5,9 @@ from src.db.crud.augmented_cap_crud import (
     create_augmented_cap,
     delete_augmented_cap,
     get_all_augmented_caps,
-    get_augmented_cap_by_id,
+    get_augmented_cap_by_id
 )
+from src.db.crud.beer_brand_crud import create_beer_brand
 from src.db.crud.beer_cap_crud import create_beer_cap
 from src.db.crud.beer_crud import create_beer
 from src.db.entities.augmented_cap_entity import AugmentedCap
@@ -17,7 +18,8 @@ class TestAugmentedCapCRUD:
 
     @pytest.fixture(autouse=True)
     async def _setup_beer_and_cap(self, db_session: AsyncSession):
-        self.beer = await create_beer(db_session, "Test Beer For Augmented Caps")
+        beer_brand = await create_beer_brand(db_session, "Test Brand")
+        self.beer = await create_beer(db_session, "Test Beer For Augmented Caps", beer_brand.id)
         self.beer_cap = await create_beer_cap(db_session, self.beer.id, "base_cap_for_aug_tests.jpg")
         assert self.beer_cap.id is not None
         yield

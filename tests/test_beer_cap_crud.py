@@ -1,6 +1,7 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.db.crud.beer_brand_crud import create_beer_brand
 from src.db.crud.beer_cap_crud import create_beer_cap, delete_beer_cap, get_all_beer_caps, get_beer_cap_by_id
 from src.db.crud.beer_crud import create_beer
 from src.db.entities.beer_cap_entity import BeerCap
@@ -11,7 +12,8 @@ class TestBeerCapCRUD:
 
     @pytest.fixture(autouse=True)
     async def _setup_beer(self, db_session: AsyncSession):
-        self.beer = await create_beer(db_session, "Test Beer For Caps")
+        beer_brand = await create_beer_brand(db_session, "Test Brand")
+        self.beer = await create_beer(db_session, "Test Beer For Caps", beer_brand.id)
         assert self.beer.id is not None
         yield
 

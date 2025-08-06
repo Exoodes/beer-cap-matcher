@@ -30,6 +30,7 @@ router = APIRouter(prefix="/beer_caps", tags=["Beer Caps"])
 )
 async def create_cap_with_new_beer(
     beer_name: str = Form(..., min_length=1, max_length=100),
+    beer_brand_id: int = Form(..., ge=1),
     variant_name: Optional[str] = Form(None, max_length=100),
     file: UploadFile = File(...),
     beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
@@ -47,7 +48,7 @@ async def create_cap_with_new_beer(
     cap_metadata = BeerCapCreateSchema(filename=file.filename, variant_name=variant_name)
 
     beer_cap = await beer_cap_facade.create_beer_with_cap_and_upload(
-        beer_name, cap_metadata, file_like, len(contents), file.content_type
+        beer_name, beer_brand_id, cap_metadata, file_like, len(contents), file.content_type
     )
 
     logger.info("Uploaded beer cap for new beer: %s (filename: %s)", beer_name, file.filename)

@@ -8,8 +8,8 @@ from src.api.schemas.beer.beer_update import BeerUpdateSchema
 from src.db.entities.beer_entity import Beer
 
 
-async def create_beer(session: AsyncSession, name: str, commit: bool = True) -> Beer:
-    beer = Beer(name=name)
+async def create_beer(session: AsyncSession, name: str, beer_brand_id: int, commit: bool = True) -> Beer:
+    beer = Beer(name=name, beer_brand_id=beer_brand_id)
     session.add(beer)
 
     if commit:
@@ -25,11 +25,15 @@ async def get_beer_by_id(
     session: AsyncSession,
     beer_id: int,
     load_caps: bool = False,
+    load_beer_brand: bool = False,
 ) -> Optional[Beer]:
     stmt = select(Beer).where(Beer.id == beer_id)
 
     if load_caps:
         stmt = stmt.options(selectinload(Beer.caps))
+
+    if load_beer_brand:
+        stmt = stmt.options(selectinload(Beer.beer_brand))
 
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
@@ -63,11 +67,15 @@ async def update_beer(
     beer_id: int,
     update_data: BeerUpdateSchema,
     load_caps: bool = False,
+    load_beer_brand: bool = False,
 ) -> Optional[Beer]:
     stmt = select(Beer).where(Beer.id == beer_id)
 
     if load_caps:
         stmt = stmt.options(selectinload(Beer.caps))
+
+    if load_beer_brand:
+        stmt = stmt.options(selectinload(Beer.beer_brand))
 
     result = await session.execute(stmt)
     beer = result.scalar_one_or_none()
@@ -77,6 +85,8 @@ async def update_beer(
 
     if update_data.name is not None:
         beer.name = update_data.name
+    if update_data.beer_brand_id is not None:
+        beer.beer_brand_id = update_data.beer_brand_id
 
     await session.commit()
     await session.refresh(beer)

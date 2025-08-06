@@ -14,11 +14,13 @@ class Beer(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
+    beer_brand_id = Column(Integer, nullable=False)
 
+    beer_brand = relationship("BeerBrand", back_populates="beers")
     caps = relationship("BeerCap", back_populates="beer")
 
     def __repr__(self) -> str:
-        return f"<Beer id={self.id} name='{self.name}'>"
+        return f"<Beer id={self.id} name='{self.name}' beer_brand_id={self.beer_brand_id}>"
 
     def __str__(self) -> str:
         return f"Beer: {self.name} (ID: {self.id})"
