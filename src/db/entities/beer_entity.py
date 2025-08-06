@@ -14,8 +14,10 @@ class Beer(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
+    country_id = Column(Integer, ForeignKey("countries.id"), nullable=True)
     beer_brand_id = Column(Integer, ForeignKey("beer_brands.id"), nullable=False)
 
+    country = relationship("Country", back_populates="beers")
     beer_brand = relationship("BeerBrand", back_populates="beers")
     caps = relationship("BeerCap", back_populates="beer")
 

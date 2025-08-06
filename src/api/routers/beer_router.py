@@ -11,6 +11,7 @@ from src.api.dependencies.facades import get_beer_cap_facade
 from src.api.schemas.beer.beer_response import BeerResponseWithCaps
 from src.api.schemas.beer.beer_response_base import BeerResponseBase
 from src.api.schemas.beer.beer_update import BeerUpdateSchema
+from src.api.schemas.country.country_response_base import CountryResponseBase
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponseWithUrl
 from src.api.schemas.beer_cap.beer_cap_response_base import BeerCapResponseBase
@@ -30,19 +31,25 @@ router = APIRouter(prefix="/beers", tags=["Beers"])
 )
 async def get_all_beers_endpoint(
     include_caps: bool = Query(False, description="Include caps for each beer"),
+    include_country: bool = Query(False, description="Include country for each beer"),
     db: AsyncSession = Depends(get_db_session),
 ) -> List[BeerResponseWithCaps]:
-    """
-    Get all beers, optionally including their caps.
-    """
-    beers = await get_all_beers(db, load_caps=include_caps)
+    """Get all beers, optionally including their caps and country."""
+    beers = await get_all_beers(db, load_caps=include_caps, load_country=include_country)
 
     return [
         BeerResponseWithCaps(
             id=beer.id,
             name=beer.name,
             caps=[BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name) for cap in beer.caps]
-            if include_caps else None
+            if include_caps else None,
+            country=CountryResponseBase(
+                id=beer.country.id,
+                name=beer.country.name,
+                description=beer.country.description,
+            )
+            if include_country and beer.country
+            else None,
         )
         for beer in beers
     ]
@@ -56,22 +63,33 @@ async def get_all_beers_endpoint(
 async def get_beer_by_id_endpoint(
     beer_id: int,
     include_caps: bool = Query(False, description="Include caps for the beer"),
+    include_country: bool = Query(False, description="Include country for the beer"),
     db: AsyncSession = Depends(get_db_session),
 ) -> BeerResponseWithCaps:
-    """
-    Get a specific beer by its ID, optionally including its caps.
-    """
-    beer = await get_beer_by_id(db, beer_id, load_caps=include_caps)
+    """Get a specific beer by its ID, optionally including its caps and country."""
+    beer = await get_beer_by_id(
+        db, beer_id, load_caps=include_caps, load_country=include_country
+    )
 
     if not beer:
         raise HTTPException(status_code=404, detail="Beer not found.")
 
     caps = (
         [BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name) for cap in beer.caps]
-        if include_caps else None
+        if include_caps
+        else None
+    )
+    country = (
+        CountryResponseBase(
+            id=beer.country.id,
+            name=beer.country.name,
+            description=beer.country.description,
+        )
+        if include_country and beer.country
+        else None
     )
 
-    return BeerResponseWithCaps(id=beer.id, name=beer.name, caps=caps)
+    return BeerResponseWithCaps(id=beer.id, name=beer.name, caps=caps, country=country)
 
 
 @router.delete(
@@ -113,7 +131,9 @@ async def update_beer_endpoint(
     """
     Update beer details.
     """
-    updated_beer = await update_beer(db, beer_id, update_data, load_caps=True)
+    updated_beer = await update_beer(
+        db, beer_id, update_data, load_caps=True, load_country=True
+    )
 
     if not updated_beer:
         raise HTTPException(status_code=404, detail="Beer not found.")
@@ -124,8 +144,19 @@ async def update_beer_endpoint(
         BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name)
         for cap in updated_beer.caps
     ]
+    country = (
+        CountryResponseBase(
+            id=updated_beer.country.id,
+            name=updated_beer.country.name,
+            description=updated_beer.country.description,
+        )
+        if updated_beer.country
+        else None
+    )
 
-    return BeerResponseWithCaps(id=updated_beer.id, name=updated_beer.name, caps=caps)
+    return BeerResponseWithCaps(
+        id=updated_beer.id, name=updated_beer.name, caps=caps, country=country
+    )
 
 
 @router.post(

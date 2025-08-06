@@ -8,8 +8,10 @@ from src.api.schemas.beer.beer_update import BeerUpdateSchema
 from src.db.entities.beer_entity import Beer
 
 
-async def create_beer(session: AsyncSession, name: str, beer_brand_id: int, commit: bool = True) -> Beer:
-    beer = Beer(name=name, beer_brand_id=beer_brand_id)
+async def create_beer(
+    session: AsyncSession, name: str, beer_brand_id: int, country_id: Optional[int] = None, commit: bool = True
+) -> Beer:
+    beer = Beer(name=name, beer_brand_id=beer_brand_id, country_id=country_id)
     session.add(beer)
 
     if commit:
@@ -26,11 +28,14 @@ async def get_beer_by_id(
     beer_id: int,
     load_caps: bool = False,
     load_beer_brand: bool = False,
+    load_country: bool = False,
 ) -> Optional[Beer]:
     stmt = select(Beer).where(Beer.id == beer_id)
 
     if load_caps:
         stmt = stmt.options(selectinload(Beer.caps))
+    if load_country:
+        stmt = stmt.options(selectinload(Beer.country))
 
     if load_beer_brand:
         stmt = stmt.options(selectinload(Beer.beer_brand))
@@ -42,11 +47,14 @@ async def get_beer_by_id(
 async def get_all_beers(
     session: AsyncSession,
     load_caps: bool = False,
+    load_country: bool = False,
 ) -> List[Beer]:
     stmt = select(Beer)
 
     if load_caps:
         stmt = stmt.options(selectinload(Beer.caps))
+    if load_country:
+        stmt = stmt.options(selectinload(Beer.country))
 
     result = await session.execute(stmt)
     return result.scalars().all()
@@ -68,11 +76,14 @@ async def update_beer(
     update_data: BeerUpdateSchema,
     load_caps: bool = False,
     load_beer_brand: bool = False,
+    load_country: bool = False,
 ) -> Optional[Beer]:
     stmt = select(Beer).where(Beer.id == beer_id)
 
     if load_caps:
         stmt = stmt.options(selectinload(Beer.caps))
+    if load_country:
+        stmt = stmt.options(selectinload(Beer.country))
 
     if load_beer_brand:
         stmt = stmt.options(selectinload(Beer.beer_brand))
@@ -87,6 +98,8 @@ async def update_beer(
         beer.name = update_data.name
     if update_data.beer_brand_id is not None:
         beer.beer_brand_id = update_data.beer_brand_id
+    if update_data.country_id is not None:
+        beer.country_id = update_data.country_id
 
     await session.commit()
     await session.refresh(beer)

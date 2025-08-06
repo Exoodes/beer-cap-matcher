@@ -13,7 +13,10 @@ class BeerUpdateSchema(BaseModel):
         default=None,
         min_length=1,
         max_length=100,
-        description="Updated name of the beer"
+        description="Updated name of the beer",
+    )
+    country_id: Optional[int] = Field(
+        default=None, description="ID of the associated country"
     )
 
     beer_brand_id: Optional[int] = Field(

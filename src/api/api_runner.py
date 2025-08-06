@@ -1,12 +1,19 @@
 from contextlib import asynccontextmanager
 from typing import Any, Generator
 
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 
 from src.api.middleware.http_request_logging_middleware import LogRequestMiddleware
-from src.api.routers import augmented_cap_router, beer_brand_router, beer_cap_router, beer_router, similarity_router
+from src.api.routers import (
+    augmented_cap_router,
+    beer_brand_router,
+    beer_cap_router,
+    beer_router,
+    country_router,
+    similarity_router,
+)
 from src.services.cap_detection_service import CapDetectionService
 from src.services.query_service import QueryService
 from src.storage.minio.minio_client import MinioClientWrapper
@@ -59,6 +66,7 @@ app.add_middleware(LogRequestMiddleware)
 # Routers
 app.include_router(beer_cap_router.router)
 app.include_router(beer_router.router)
+app.include_router(country_router.router)
 app.include_router(augmented_cap_router.router)
 app.include_router(similarity_router.router)
 app.include_router(beer_brand_router.router)
