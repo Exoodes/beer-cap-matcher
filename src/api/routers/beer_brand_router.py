@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Form, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.constants.responses import INTERNAL_SERVER_ERROR_RESPONSE, NOT_FOUND_RESPONSE
@@ -16,12 +16,12 @@ from src.db.crud.beer_brand_crud import (
     delete_beer_brand,
     get_all_beer_brands,
     get_beer_brand_by_id,
-    update_beer_brand
+    update_beer_brand,
 )
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/breweries", tags=["Breweries"])
+router = APIRouter(prefix="/beer_brands", tags=["Beer Brands"])
 
 
 @router.post(
@@ -30,11 +30,13 @@ router = APIRouter(prefix="/breweries", tags=["Breweries"])
     responses={422: {"description": "Validation Error"}, **INTERNAL_SERVER_ERROR_RESPONSE},
 )
 async def create_beer_brand_endpoint(
-    data: BeerBrandCreateSchema, db: AsyncSession = Depends(get_db_session)
+    name: str = Form(..., description="Name of the beer brand"), db: AsyncSession = Depends(get_db_session)
 ) -> BeerBrandResponseWithBeers:
+    data = BeerBrandCreateSchema(name=name)
+
     beer_brand = await create_beer_brand(db, name=data.name)
     logger.info("Created beer_brand %s", data.name)
-    return BeerBrandResponseWithBeers(id=beer_brand.id, name=beer_brand.name, description=beer_brand.description, beers=[])
+    return BeerBrandResponseWithBeers(id=beer_brand.id, name=beer_brand.name, beers=[])
 
 
 @router.get(
@@ -51,10 +53,7 @@ async def get_all_beer_brands_endpoint(
         BeerBrandResponseWithBeers(
             id=b.id,
             name=b.name,
-            description=b.description,
-            beers=[BeerResponseBase(id=beer.id, name=beer.name) for beer in b.beers]
-            if include_beers
-            else None,
+            beers=[BeerResponseBase(id=beer.id, name=beer.name) for beer in b.beers] if include_beers else None,
         )
         for b in beer_brands
     ]
@@ -78,7 +77,6 @@ async def get_beer_brand_by_id_endpoint(
     return BeerBrandResponseWithBeers(
         id=beer_brand.id,
         name=beer_brand.name,
-        description=beer_brand.description,
         beers=beers,
     )
 
@@ -88,9 +86,7 @@ async def get_beer_brand_by_id_endpoint(
     response_model=StatusResponse,
     responses={**NOT_FOUND_RESPONSE, **INTERNAL_SERVER_ERROR_RESPONSE},
 )
-async def delete_beer_brand_endpoint(
-    beer_brand_id: int, db: AsyncSession = Depends(get_db_session)
-) -> StatusResponse:
+async def delete_beer_brand_endpoint(beer_brand_id: int, db: AsyncSession = Depends(get_db_session)) -> StatusResponse:
     deleted = await delete_beer_brand(db, beer_brand_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="beer_brand not found.")
@@ -116,6 +112,5 @@ async def update_beer_brand_endpoint(
     return BeerBrandResponseWithBeers(
         id=beer_brand.id,
         name=beer_brand.name,
-        description=beer_brand.description,
         beers=beers,
     )

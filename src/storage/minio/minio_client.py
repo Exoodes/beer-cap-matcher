@@ -1,6 +1,6 @@
 import concurrent.futures
-from datetime import timedelta
 import os
+from datetime import timedelta
 from typing import BinaryIO, Optional
 
 from minio import Minio
@@ -47,7 +47,7 @@ class MinioClientWrapper:
         object_name: str,
         data: BinaryIO,
         length: Optional[int] = None,
-        content_type: str = "image/png"
+        content_type: str = "image/png",
     ) -> str:
         """Uploads a file to a specified bucket.
 
@@ -76,11 +76,7 @@ class MinioClientWrapper:
                     raise ValueError("Cannot determine length of non-seekable stream. Please provide length.")
 
             self.client.put_object(
-                bucket_name=bucket_name,
-                object_name=object_name,
-                data=data,
-                length=length,
-                content_type=content_type
+                bucket_name=bucket_name, object_name=object_name, data=data, length=length, content_type=content_type
             )
             logger.info("Uploaded %s to %s.", object_name, bucket_name)
             return object_name
@@ -104,6 +100,27 @@ class MinioClientWrapper:
         except S3Error as e:
             logger.error("Failed to delete %s from %s: %s", object_name, bucket_name, e)
             raise
+
+    def object_exists(self, bucket_name: str, object_name: str) -> bool:
+        """Checks if an object exists in the specified bucket.
+
+        Args:
+            bucket_name (str): Name of the bucket.
+            object_name (str): Name of the object to check.
+
+        Returns:
+            bool: True if the object exists, False otherwise.
+        """
+        try:
+            self.client.stat_object(bucket_name, object_name)
+            logger.info("Object %s exists in bucket %s.", object_name, bucket_name)
+            return True
+        except S3Error as e:
+            if e.code == "NoSuchKey":
+                logger.info("Object %s does not exist in bucket %s.", object_name, bucket_name)
+                return False
+            logger.error("Error checking existence of %s in %s: %s", object_name, bucket_name, e)
+            return False
 
     def download_bytes(self, bucket_name: str, object_name: str) -> bytes:
         """Downloads an object from a bucket and returns its content as bytes.
@@ -147,9 +164,7 @@ class MinioClientWrapper:
             S3Error: If URL generation fails.
         """
         try:
-            url = self.client.presigned_get_object(
-                bucket_name, object_name, expires=timedelta(seconds=expiry_seconds)
-            )
+            url = self.client.presigned_get_object(bucket_name, object_name, expires=timedelta(seconds=expiry_seconds))
             logger.info("Generated presigned URL for %s in %s.", object_name, bucket_name)
             return url
         except S3Error as e:
@@ -171,11 +186,7 @@ class MinioClientWrapper:
                 logger.info("Bucket already exists: %s", bucket)
 
     def download_all_objects_parallel(
-        self,
-        bucket_name: str,
-        prefix: str = "",
-        recursive: bool = True,
-        max_workers: int = 8
+        self, bucket_name: str, prefix: str = "", recursive: bool = True, max_workers: int = 8
     ) -> list[tuple[str, bytes]]:
         """Downloads all objects from a bucket in parallel and returns their contents.
 
