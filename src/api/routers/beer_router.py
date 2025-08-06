@@ -1,5 +1,6 @@
 import io
 import logging
+from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
@@ -43,7 +44,10 @@ async def get_all_beers_endpoint(
             name=beer.name,
             rating=beer.rating,
             caps=(
-                [BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name) for cap in beer.caps]
+                [
+                    BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name, collected_date=cap.collected_date)
+                    for cap in beer.caps
+                ]
                 if include_caps
                 else None
             ),
@@ -79,7 +83,12 @@ async def get_beer_by_id_endpoint(
         raise HTTPException(status_code=404, detail="Beer not found.")
 
     caps = (
-        [BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name) for cap in beer.caps] if include_caps else None
+        [
+            BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name, collected_date=cap.collected_date)
+            for cap in beer.caps
+        ]
+        if include_caps
+        else None
     )
     country = (
         CountryResponseBase(
@@ -140,7 +149,10 @@ async def update_beer_endpoint(
 
     logger.info("Updated beer %s with data: %s", beer_id, update_data.dict())
 
-    caps = [BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name) for cap in updated_beer.caps]
+    caps = [
+        BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name, collected_date=cap.collected_date)
+        for cap in updated_beer.caps
+    ]
     country = (
         CountryResponseBase(
             id=updated_beer.country.id,
@@ -168,6 +180,7 @@ async def update_beer_endpoint(
 async def create_cap_for_existing_beer(
     beer_id: int,
     variant_name: Optional[str] = Form(None, max_length=100),
+    collected_date: Optional[date] = Form(None),
     file: UploadFile = File(...),
     beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
 ) -> BeerCapResponseWithUrl:
@@ -180,7 +193,11 @@ async def create_cap_for_existing_beer(
         raise HTTPException(status_code=400, detail="Only image uploads are allowed.")
 
     file_like = io.BytesIO(contents)
-    cap_metadata = BeerCapCreateSchema(filename=file.filename, variant_name=variant_name)
+    cap_metadata = BeerCapCreateSchema(
+        filename=file.filename,
+        variant_name=variant_name,
+        collected_date=collected_date,
+    )
 
     beer_cap = await beer_cap_facade.create_cap_for_existing_beer_and_upload(
         beer_id, cap_metadata, file_like, len(contents), file.content_type
@@ -197,6 +214,7 @@ async def create_cap_for_existing_beer(
     return BeerCapResponseWithUrl(
         id=beer_cap.id,
         variant_name=beer_cap.variant_name,
+        collected_date=beer_cap.collected_date,
         presigned_url=url,
         beer=beer_response,
     )

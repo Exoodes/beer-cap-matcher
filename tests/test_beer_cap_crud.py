@@ -1,6 +1,8 @@
 import pytest
+from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.api.schemas.country.country_create import CountryCreateSchema
 from src.db.crud.beer_brand_crud import create_beer_brand
 from src.db.crud.beer_cap_crud import create_beer_cap, delete_beer_cap, get_all_beer_caps, get_beer_cap_by_id
@@ -21,22 +23,44 @@ class TestBeerCapCRUD:
         yield
 
     async def test_create_beer_cap(self, db_session: AsyncSession):
-        cap = await create_beer_cap(db_session, self.beer.id, "test_cap_s3_key.jpg")
+        today = date.today()
+        cap = await create_beer_cap(
+            db_session,
+            self.beer.id,
+            "test_cap_s3_key.jpg",
+            BeerCapCreateSchema(filename="test_cap_s3_key.jpg", collected_date=today),
+        )
         assert isinstance(cap, BeerCap)
         assert cap.id is not None
         assert cap.beer_id == self.beer.id
         assert cap.s3_key == "test_cap_s3_key.jpg"
+        assert cap.collected_date == today
 
     async def test_get_beer_cap_by_id(self, db_session: AsyncSession):
-        created_cap = await create_beer_cap(db_session, self.beer.id, "fetched_cap_s3_key.jpg")
+        created_cap = await create_beer_cap(
+            db_session,
+            self.beer.id,
+            "fetched_cap_s3_key.jpg",
+            BeerCapCreateSchema(filename="fetched_cap_s3_key.jpg", collected_date=date.today()),
+        )
         fetched_cap = await get_beer_cap_by_id(db_session, created_cap.id)
         assert fetched_cap is not None
         assert fetched_cap.id == created_cap.id
         assert fetched_cap.s3_key == "fetched_cap_s3_key.jpg"
 
     async def test_get_all_beer_caps(self, db_session: AsyncSession):
-        await create_beer_cap(db_session, self.beer.id, "cap_one.jpg")
-        await create_beer_cap(db_session, self.beer.id, "cap_two.jpg")
+        await create_beer_cap(
+            db_session,
+            self.beer.id,
+            "cap_one.jpg",
+            BeerCapCreateSchema(filename="cap_one.jpg", collected_date=date.today()),
+        )
+        await create_beer_cap(
+            db_session,
+            self.beer.id,
+            "cap_two.jpg",
+            BeerCapCreateSchema(filename="cap_two.jpg", collected_date=date.today()),
+        )
         all_caps = await get_all_beer_caps(db_session)
         assert len(all_caps) == 2
         s3_keys = [c.s3_key for c in all_caps]
@@ -44,7 +68,12 @@ class TestBeerCapCRUD:
         assert "cap_two.jpg" in s3_keys
 
     async def test_delete_beer_cap(self, db_session: AsyncSession):
-        new_cap = await create_beer_cap(db_session, self.beer.id, "delete_test_cap.jpg")
+        new_cap = await create_beer_cap(
+            db_session,
+            self.beer.id,
+            "delete_test_cap.jpg",
+            BeerCapCreateSchema(filename="delete_test_cap.jpg", collected_date=date.today()),
+        )
         await delete_beer_cap(db_session, new_cap.id)
         deleted_cap = await get_beer_cap_by_id(db_session, new_cap.id)
         assert deleted_cap is None

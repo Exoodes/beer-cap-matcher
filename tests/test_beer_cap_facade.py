@@ -5,6 +5,8 @@ from unittest.mock import MagicMock
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from datetime import date
+
 from src.api.schemas.augmented_beer_cap.augmented_cap_create import AugmentedCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.db.crud.augmented_cap_crud import get_all_augmented_caps, get_augmented_cap_by_id
@@ -34,7 +36,9 @@ class TestBeerCapFacade:
         beer_brand = await create_beer_brand(db_session, "Facade Beer Brand")
         beer_name = "Facade Beer 1"
         cap_filename = "cap_facade_001.jpg"
-        cap_metadata = BeerCapCreateSchema(filename=cap_filename, metadata={})
+        cap_metadata = BeerCapCreateSchema(
+            filename=cap_filename, metadata={}, collected_date=date.today()
+        )
 
         dummy_image_file_like.seek(0)
 
@@ -66,6 +70,7 @@ class TestBeerCapFacade:
         fetched_cap = await get_beer_cap_by_id(db_session, beer_cap.id)
         assert fetched_cap is not None
         assert fetched_cap.s3_key == cap_filename
+        assert fetched_cap.collected_date == cap_metadata.collected_date
 
         print(f"✅ test_create_beer_with_cap_and_upload passed for {cap_filename}")
 

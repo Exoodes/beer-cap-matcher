@@ -12,7 +12,12 @@ from src.db.entities.beer_cap_entity import BeerCap
 async def create_beer_cap(
     session: AsyncSession, beer_id: int, s3_key: str, data: BeerCapCreateSchema, commit: bool = True
 ) -> BeerCap:
-    new_cap = BeerCap(beer_id=beer_id, s3_key=s3_key, variant_name=data.variant_name)
+    new_cap = BeerCap(
+        beer_id=beer_id,
+        s3_key=s3_key,
+        variant_name=data.variant_name,
+        collected_date=data.collected_date,
+    )
     session.add(new_cap)
 
     if commit:
@@ -108,6 +113,9 @@ async def update_beer_cap(
 
     if update_data.beer_id is not None:
         beer_cap.beer_id = update_data.beer_id
+
+    if update_data.collected_date is not None:
+        beer_cap.collected_date = update_data.collected_date
 
     await session.commit()
     await session.refresh(beer_cap)
