@@ -9,9 +9,11 @@ from src.db.entities.beer_entity import Beer
 
 
 async def create_beer(
-    session: AsyncSession, name: str, beer_brand_id: int, country_id: Optional[int] = None, commit: bool = True
+    
+    session: AsyncSession, name: str, rating: int = 0, beer_brand_id: int, country_id: Optional[int] = None, commit: bool = True
+
 ) -> Beer:
-    beer = Beer(name=name, beer_brand_id=beer_brand_id, country_id=country_id)
+    beer = Beer(name=name, rating=rating, beer_brand_id=beer_brand_id, country_id=country_id)
     session.add(beer)
 
     if commit:
@@ -96,6 +98,8 @@ async def update_beer(
 
     if update_data.name is not None:
         beer.name = update_data.name
+    if update_data.rating is not None:
+        beer.rating = update_data.rating
     if update_data.beer_brand_id is not None:
         beer.beer_brand_id = update_data.beer_brand_id
     if update_data.country_id is not None:

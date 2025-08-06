@@ -22,7 +22,7 @@ class TestAugmentedCapCRUD:
     async def _setup_beer_and_cap(self, db_session: AsyncSession):
         beer_brand = await create_beer_brand(db_session, "Test Brand")
         country = await create_country(db_session, CountryCreateSchema(name="AugCountry"))
-        self.beer = await create_beer(db_session, "Test Beer For Augmented Caps", beer_brand.id, country_id=country.id)
+        self.beer = await create_beer(db_session, "Test Beer For Augmented Caps", rating=6, beer_brand.id, country_id=country.id)
         self.beer_cap = await create_beer_cap(db_session, self.beer.id, "base_cap_for_aug_tests.jpg")
         assert self.beer_cap.id is not None
         yield

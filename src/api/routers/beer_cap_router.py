@@ -54,7 +54,9 @@ async def create_cap_with_new_beer(
     logger.info("Uploaded beer cap for new beer: %s (filename: %s)", beer_name, file.filename)
 
     url = beer_cap_facade.get_presigned_url_for_cap(beer_cap.s3_key)
-    beer_response = BeerResponseBase(id=beer_cap.beer_id, name=beer_cap.beer.name)
+    beer_response = BeerResponseBase(
+        id=beer_cap.beer_id, name=beer_cap.beer.name, rating=beer_cap.beer.rating
+    )
 
     return BeerCapResponseWithUrl(
         id=beer_cap.id,
@@ -83,7 +85,7 @@ async def api_get_all_beer_caps(
             id=cap.id,
             variant_name=cap.variant_name,
             presigned_url=beer_cap_facade.get_presigned_url_for_cap(cap.s3_key),
-            beer=BeerResponseBase(id=cap.beer_id, name=cap.beer.name),
+            beer=BeerResponseBase(id=cap.beer_id, name=cap.beer.name, rating=cap.beer.rating),
         )
         for cap in beer_caps
     ]
@@ -112,7 +114,7 @@ async def get_all_caps_from_beer(
             id=cap.id,
             variant_name=cap.variant_name,
             presigned_url=beer_cap_facade.get_presigned_url_for_cap(cap.s3_key),
-            beer=BeerResponseBase(id=cap.beer_id, name=cap.beer.name),
+            beer=BeerResponseBase(id=cap.beer_id, name=cap.beer.name, rating=cap.beer.rating),
         )
         for cap in beer_caps
     ]
@@ -137,7 +139,9 @@ async def get_beer_cap(
         raise HTTPException(status_code=404, detail="Beer cap not found.")
 
     url = beer_cap_facade.get_presigned_url_for_cap(beer_cap.s3_key)
-    beer_response = BeerResponseBase(id=beer_cap.beer_id, name=beer_cap.beer.name)
+    beer_response = BeerResponseBase(
+        id=beer_cap.beer_id, name=beer_cap.beer.name, rating=beer_cap.beer.rating
+    )
 
     return BeerCapResponseWithUrl(
         id=beer_cap.id,
@@ -198,7 +202,9 @@ async def update_beer_cap_endpoint(
     logger.info("Updated beer cap %s with data: %s", beer_cap_id, update_data.dict())
 
     url = beer_cap_facade.get_presigned_url_for_cap(updated_cap.s3_key)
-    beer_response = BeerResponseBase(id=updated_cap.beer_id, name=updated_cap.beer.name)
+    beer_response = BeerResponseBase(
+        id=updated_cap.beer_id, name=updated_cap.beer.name, rating=updated_cap.beer.rating
+    )
 
     return BeerCapResponseWithUrl(
         id=updated_cap.id,

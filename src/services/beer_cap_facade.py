@@ -42,7 +42,7 @@ class BeerCapFacade:
         content_type: str = "image/png",
     ) -> BeerCap:
         async with self.session_maker() as session:
-            beer = await create_beer(session, beer_name, beer_brand_id, False)
+            beer = await create_beer(session, beer_name, beer_brand_id, commit=False)
 
             object_name = cap_metadata.filename
             self.minio_wrapper.upload_file(

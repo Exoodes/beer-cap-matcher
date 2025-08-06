@@ -24,4 +24,11 @@ class BeerUpdateSchema(BaseModel):
         description="ID of the beer brand to which this beer belongs"
     )
 
+    rating: Optional[int] = Field(
+        default=None,
+        ge=0,
+        le=10,
+        description="Updated rating of the beer (0-10)"
+    )
+
     model_config = ConfigDict(from_attributes=True, extra="forbid")
