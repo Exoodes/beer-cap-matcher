@@ -9,9 +9,12 @@ from src.db.entities.beer_entity import Beer
 
 
 async def create_beer(
-    
-    session: AsyncSession, name: str, rating: int = 0, beer_brand_id: int, country_id: Optional[int] = None, commit: bool = True
-
+    session: AsyncSession,
+    name: str,
+    beer_brand_id: int,
+    rating: int = 0,
+    country_id: Optional[int] = None,
+    commit: bool = True,
 ) -> Beer:
     beer = Beer(name=name, rating=rating, beer_brand_id=beer_brand_id, country_id=country_id)
     session.add(beer)
