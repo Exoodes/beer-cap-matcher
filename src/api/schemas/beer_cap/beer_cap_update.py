@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -13,6 +14,9 @@ class BeerCapUpdateSchema(BaseModel):
     )
     beer_id: Optional[int] = Field(
         default=None, description="New beer ID to associate with this cap"
+    )
+    collected_date: Optional[date] = Field(
+        default=None, description="Updated collection date of the beer cap"
     )
 
     model_config = ConfigDict(from_attributes=True, extra="forbid")

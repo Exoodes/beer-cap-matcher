@@ -1,5 +1,6 @@
 import io
 import logging
+from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -30,7 +31,9 @@ router = APIRouter(prefix="/beer_caps", tags=["Beer Caps"])
 )
 async def create_cap_with_new_beer(
     beer_name: str = Form(..., min_length=1, max_length=100),
+    beer_brand_id: int = Form(..., ge=1),
     variant_name: Optional[str] = Form(None, max_length=100),
+    collected_date: Optional[date] = Form(None),
     file: UploadFile = File(...),
     beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
 ) -> BeerCapResponseWithUrl:
@@ -44,20 +47,27 @@ async def create_cap_with_new_beer(
 
     file_like = io.BytesIO(contents)
 
-    cap_metadata = BeerCapCreateSchema(filename=file.filename, variant_name=variant_name)
+    cap_metadata = BeerCapCreateSchema(
+        filename=file.filename,
+        variant_name=variant_name,
+        collected_date=collected_date,
+    )
 
     beer_cap = await beer_cap_facade.create_beer_with_cap_and_upload(
-        beer_name, cap_metadata, file_like, len(contents), file.content_type
+        beer_name, beer_brand_id, cap_metadata, file_like, len(contents), file.content_type
     )
 
     logger.info("Uploaded beer cap for new beer: %s (filename: %s)", beer_name, file.filename)
 
     url = beer_cap_facade.get_presigned_url_for_cap(beer_cap.s3_key)
-    beer_response = BeerResponseBase(id=beer_cap.beer_id, name=beer_cap.beer.name)
+    beer_response = BeerResponseBase(
+        id=beer_cap.beer_id, name=beer_cap.beer.name, rating=beer_cap.beer.rating
+    )
 
     return BeerCapResponseWithUrl(
         id=beer_cap.id,
         variant_name=beer_cap.variant_name,
+        collected_date=beer_cap.collected_date,
         presigned_url=url,
         beer=beer_response,
     )
@@ -81,8 +91,9 @@ async def api_get_all_beer_caps(
         BeerCapResponseWithUrl(
             id=cap.id,
             variant_name=cap.variant_name,
+            collected_date=cap.collected_date,
             presigned_url=beer_cap_facade.get_presigned_url_for_cap(cap.s3_key),
-            beer=BeerResponseBase(id=cap.beer_id, name=cap.beer.name),
+            beer=BeerResponseBase(id=cap.beer_id, name=cap.beer.name, rating=cap.beer.rating),
         )
         for cap in beer_caps
     ]
@@ -110,8 +121,9 @@ async def get_all_caps_from_beer(
         BeerCapResponseWithUrl(
             id=cap.id,
             variant_name=cap.variant_name,
+            collected_date=cap.collected_date,
             presigned_url=beer_cap_facade.get_presigned_url_for_cap(cap.s3_key),
-            beer=BeerResponseBase(id=cap.beer_id, name=cap.beer.name),
+            beer=BeerResponseBase(id=cap.beer_id, name=cap.beer.name, rating=cap.beer.rating),
         )
         for cap in beer_caps
     ]
@@ -136,11 +148,14 @@ async def get_beer_cap(
         raise HTTPException(status_code=404, detail="Beer cap not found.")
 
     url = beer_cap_facade.get_presigned_url_for_cap(beer_cap.s3_key)
-    beer_response = BeerResponseBase(id=beer_cap.beer_id, name=beer_cap.beer.name)
+    beer_response = BeerResponseBase(
+        id=beer_cap.beer_id, name=beer_cap.beer.name, rating=beer_cap.beer.rating
+    )
 
     return BeerCapResponseWithUrl(
         id=beer_cap.id,
         variant_name=beer_cap.variant_name,
+        collected_date=beer_cap.collected_date,
         presigned_url=url,
         beer=beer_response,
     )
@@ -197,11 +212,14 @@ async def update_beer_cap_endpoint(
     logger.info("Updated beer cap %s with data: %s", beer_cap_id, update_data.dict())
 
     url = beer_cap_facade.get_presigned_url_for_cap(updated_cap.s3_key)
-    beer_response = BeerResponseBase(id=updated_cap.beer_id, name=updated_cap.beer.name)
+    beer_response = BeerResponseBase(
+        id=updated_cap.beer_id, name=updated_cap.beer.name, rating=updated_cap.beer.rating
+    )
 
     return BeerCapResponseWithUrl(
         id=updated_cap.id,
         variant_name=updated_cap.variant_name,
+        collected_date=updated_cap.collected_date,
         presigned_url=url,
         beer=beer_response,
     )

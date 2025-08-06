@@ -1,5 +1,6 @@
 import io
 import logging
+from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
@@ -15,6 +16,7 @@ from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponseWithUrl
 from src.api.schemas.beer_cap.beer_cap_response_base import BeerCapResponseBase
 from src.api.schemas.common.status_response import StatusResponse
+from src.api.schemas.country.country_response_base import CountryResponseBase
 from src.db.crud.beer_crud import get_all_beers, get_beer_by_id, update_beer
 from src.services.beer_cap_facade import BeerCapFacade
 
@@ -30,19 +32,34 @@ router = APIRouter(prefix="/beers", tags=["Beers"])
 )
 async def get_all_beers_endpoint(
     include_caps: bool = Query(False, description="Include caps for each beer"),
+    include_country: bool = Query(False, description="Include country for each beer"),
     db: AsyncSession = Depends(get_db_session),
 ) -> List[BeerResponseWithCaps]:
-    """
-    Get all beers, optionally including their caps.
-    """
-    beers = await get_all_beers(db, load_caps=include_caps)
+    """Get all beers, optionally including their caps and country."""
+    beers = await get_all_beers(db, load_caps=include_caps, load_country=include_country)
 
     return [
         BeerResponseWithCaps(
             id=beer.id,
             name=beer.name,
-            caps=[BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name) for cap in beer.caps]
-            if include_caps else None
+            rating=beer.rating,
+            caps=(
+                [
+                    BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name, collected_date=cap.collected_date)
+                    for cap in beer.caps
+                ]
+                if include_caps
+                else None
+            ),
+            country=(
+                CountryResponseBase(
+                    id=beer.country.id,
+                    name=beer.country.name,
+                    description=beer.country.description,
+                )
+                if include_country and beer.country
+                else None
+            ),
         )
         for beer in beers
     ]
@@ -56,22 +73,34 @@ async def get_all_beers_endpoint(
 async def get_beer_by_id_endpoint(
     beer_id: int,
     include_caps: bool = Query(False, description="Include caps for the beer"),
+    include_country: bool = Query(False, description="Include country for the beer"),
     db: AsyncSession = Depends(get_db_session),
 ) -> BeerResponseWithCaps:
-    """
-    Get a specific beer by its ID, optionally including its caps.
-    """
-    beer = await get_beer_by_id(db, beer_id, load_caps=include_caps)
+    """Get a specific beer by its ID, optionally including its caps and country."""
+    beer = await get_beer_by_id(db, beer_id, load_caps=include_caps, load_country=include_country)
 
     if not beer:
         raise HTTPException(status_code=404, detail="Beer not found.")
 
     caps = (
-        [BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name) for cap in beer.caps]
-        if include_caps else None
+        [
+            BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name, collected_date=cap.collected_date)
+            for cap in beer.caps
+        ]
+        if include_caps
+        else None
+    )
+    country = (
+        CountryResponseBase(
+            id=beer.country.id,
+            name=beer.country.name,
+            description=beer.country.description,
+        )
+        if include_country and beer.country
+        else None
     )
 
-    return BeerResponseWithCaps(id=beer.id, name=beer.name, caps=caps)
+    return BeerResponseWithCaps(id=beer.id, name=beer.name, rating=beer.rating, caps=caps, country=country)
 
 
 @router.delete(
@@ -113,7 +142,7 @@ async def update_beer_endpoint(
     """
     Update beer details.
     """
-    updated_beer = await update_beer(db, beer_id, update_data, load_caps=True)
+    updated_beer = await update_beer(db, beer_id, update_data, load_caps=True, load_country=True)
 
     if not updated_beer:
         raise HTTPException(status_code=404, detail="Beer not found.")
@@ -121,11 +150,22 @@ async def update_beer_endpoint(
     logger.info("Updated beer %s with data: %s", beer_id, update_data.dict())
 
     caps = [
-        BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name)
+        BeerCapResponseBase(id=cap.id, variant_name=cap.variant_name, collected_date=cap.collected_date)
         for cap in updated_beer.caps
     ]
+    country = (
+        CountryResponseBase(
+            id=updated_beer.country.id,
+            name=updated_beer.country.name,
+            description=updated_beer.country.description,
+        )
+        if updated_beer.country
+        else None
+    )
 
-    return BeerResponseWithCaps(id=updated_beer.id, name=updated_beer.name, caps=caps)
+    return BeerResponseWithCaps(
+        id=updated_beer.id, name=updated_beer.name, rating=updated_beer.rating, caps=caps, country=country
+    )
 
 
 @router.post(
@@ -140,6 +180,7 @@ async def update_beer_endpoint(
 async def create_cap_for_existing_beer(
     beer_id: int,
     variant_name: Optional[str] = Form(None, max_length=100),
+    collected_date: Optional[date] = Form(None),
     file: UploadFile = File(...),
     beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
 ) -> BeerCapResponseWithUrl:
@@ -152,7 +193,11 @@ async def create_cap_for_existing_beer(
         raise HTTPException(status_code=400, detail="Only image uploads are allowed.")
 
     file_like = io.BytesIO(contents)
-    cap_metadata = BeerCapCreateSchema(filename=file.filename, variant_name=variant_name)
+    cap_metadata = BeerCapCreateSchema(
+        filename=file.filename,
+        variant_name=variant_name,
+        collected_date=collected_date,
+    )
 
     beer_cap = await beer_cap_facade.create_cap_for_existing_beer_and_upload(
         beer_id, cap_metadata, file_like, len(contents), file.content_type
@@ -164,11 +209,12 @@ async def create_cap_for_existing_beer(
     logger.info("Uploaded new cap for beer %s, filename: %s", beer_id, file.filename)
 
     url = beer_cap_facade.get_presigned_url_for_cap(beer_cap.s3_key)
-    beer_response = BeerResponseBase(id=beer_cap.beer_id, name=beer_cap.beer.name)
+    beer_response = BeerResponseBase(id=beer_cap.beer_id, name=beer_cap.beer.name, rating=beer_cap.beer.rating)
 
     return BeerCapResponseWithUrl(
         id=beer_cap.id,
         variant_name=beer_cap.variant_name,
+        collected_date=beer_cap.collected_date,
         presigned_url=url,
         beer=beer_response,
     )

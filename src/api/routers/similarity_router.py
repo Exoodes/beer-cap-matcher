@@ -59,6 +59,7 @@ async def query_image(
         BeerCapResponseWithQueryResult(
             id=cap.id,
             variant_name=cap.variant_name,
+            collected_date=cap.collected_date,
             presigned_url=beer_cap_facade.get_presigned_url_for_cap(cap.s3_key),
             query_result=QueryResultResponse(
                 mean_distance=result.mean_distance,

@@ -37,6 +37,12 @@ class QueryService:
 
     async def load_index(self) -> None:
         """Download FAISS index and metadata from MinIO and return them."""
+
+        if not self.minio_wrapper.object_exists(
+            self.index_bucket, self.index_file_name
+        ) or not self.minio_wrapper.object_exists(self.index_bucket, self.metadata_file_name):
+            return
+
         index_bytes = await asyncio.to_thread(
             self.minio_wrapper.download_bytes,
             self.index_bucket,
