@@ -107,7 +107,7 @@ async def update_beer_brand_endpoint(
     beer_brand = await update_beer_brand(db, beer_brand_id, update_data, load_beers=True)
     if not beer_brand:
         raise HTTPException(status_code=404, detail="beer_brand not found.")
-    logger.info("Updated beer_brand %s with data: %s", beer_brand_id, update_data.dict())
+    logger.info("Updated beer_brand %s with data: %s", beer_brand_id, update_data.model_dump())
     beers = [BeerResponseBase(id=beer.id, name=beer.name) for beer in beer_brand.beers]
     return BeerBrandResponseWithBeers(
         id=beer_brand.id,
