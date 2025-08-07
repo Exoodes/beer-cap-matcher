@@ -30,6 +30,10 @@ setup-postgres:
 	python -m scripts.create_tables
 	@echo "✅ PostgreSQL tables ensured."
 
+seed-postgres:
+	python -m scripts.seed_db
+	@echo "✅ PostgreSQL database seeded."
+
 setup-minio:
 	python -m scripts.setup_minio
 	@echo "✅ MinIO buckets ensured."

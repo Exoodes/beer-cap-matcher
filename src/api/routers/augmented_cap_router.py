@@ -20,6 +20,59 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/augmented_caps", tags=["Augmented Caps"])
 
 
+@router.post(
+    "/generate_all/",
+    response_model=StatusResponse,
+    responses=INTERNAL_SERVER_ERROR_RESPONSE,
+)
+async def generate_all_augmented_caps(
+    augmentations_per_image: int = Query(..., gt=0, lt=100, description="Number of augmentations per image"),
+    cap_detection_service: CapDetectionService = Depends(get_cap_detection_service),
+) -> StatusResponse:
+    """
+    Generate all augmented images for caps.
+    """
+    generated_count = await cap_detection_service.preprocess(augmentations_per_image)
+    logger.info("Generated %s augmented images", generated_count)
+    return StatusResponse(success=True, message=f"Generated {generated_count} augmented images")
+
+
+@router.post(
+    "/generate_embeddings/",
+    response_model=StatusResponse,
+    responses=INTERNAL_SERVER_ERROR_RESPONSE,
+)
+async def generate_embeddings(
+    cap_detection_service: CapDetectionService = Depends(get_cap_detection_service),
+) -> StatusResponse:
+    """
+    Generate embeddings for all augmented caps.
+    """
+    embeddings_count = await cap_detection_service.generate_embeddings()
+    logger.info("Generated %s embeddings", embeddings_count)
+    return StatusResponse(success=True, message=f"Generated {embeddings_count} embeddings")
+
+
+@router.post(
+    "/generate_index/",
+    response_model=StatusResponse,
+    responses=INTERNAL_SERVER_ERROR_RESPONSE,
+)
+async def generate_index(
+    request: Request,
+    cap_detection_service: CapDetectionService = Depends(get_cap_detection_service),
+) -> StatusResponse:
+    """
+    Generate index for all augmented cap embeddings.
+    """
+    index_count = await cap_detection_service.generate_index()
+    logger.info("Generated index for %s embeddings", index_count)
+
+    await reload_query_service_index(request)
+
+    return StatusResponse(success=True, message=f"Generated index for {index_count} embeddings")
+
+
 @router.get(
     "/",
     response_model=List[AugmentedBeerCapResponse],
@@ -75,56 +128,3 @@ async def delete_augmented_cap(
         raise HTTPException(status_code=404, detail="Cap not found")
     logger.info("Deleted augmented cap with ID %s", cap_id)
     return StatusResponse(success=True, message="Augmented cap deleted")
-
-
-@router.post(
-    "/generate_all/",
-    response_model=StatusResponse,
-    responses=INTERNAL_SERVER_ERROR_RESPONSE,
-)
-async def generate_all_augmented_caps(
-    augmentations_per_image: int = Query(..., gt=0, lt=100, description="Number of augmentations per image"),
-    cap_detection_service: CapDetectionService = Depends(get_cap_detection_service),
-) -> StatusResponse:
-    """
-    Generate all augmented images for caps.
-    """
-    generated_count = await cap_detection_service.preprocess(augmentations_per_image)
-    logger.info("Generated %s augmented images", generated_count)
-    return StatusResponse(success=True, message=f"Generated {generated_count} augmented images")
-
-
-@router.post(
-    "/generate_embeddings/",
-    response_model=StatusResponse,
-    responses=INTERNAL_SERVER_ERROR_RESPONSE,
-)
-async def generate_embeddings(
-    cap_detection_service: CapDetectionService = Depends(get_cap_detection_service),
-) -> StatusResponse:
-    """
-    Generate embeddings for all augmented caps.
-    """
-    embeddings_count = await cap_detection_service.generate_embeddings()
-    logger.info("Generated %s embeddings", embeddings_count)
-    return StatusResponse(success=True, message=f"Generated {embeddings_count} embeddings")
-
-
-@router.post(
-    "/generate_index/",
-    response_model=StatusResponse,
-    responses=INTERNAL_SERVER_ERROR_RESPONSE,
-)
-async def generate_index(
-    request: Request,
-    cap_detection_service: CapDetectionService = Depends(get_cap_detection_service),
-) -> StatusResponse:
-    """
-    Generate index for all augmented cap embeddings.
-    """
-    index_count = await cap_detection_service.generate_index()
-    logger.info("Generated index for %s embeddings", index_count)
-
-    await reload_query_service_index(request)
-
-    return StatusResponse(success=True, message=f"Generated index for {index_count} embeddings")

@@ -3,20 +3,22 @@ import logging
 from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import (APIRouter, Depends, File, Form, HTTPException, Query,
+                     UploadFile)
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.constants.responses import INTERNAL_SERVER_ERROR_RESPONSE, NOT_FOUND_RESPONSE
+from src.api.constants.responses import (INTERNAL_SERVER_ERROR_RESPONSE,
+                                         NOT_FOUND_RESPONSE)
 from src.api.dependencies.db import get_db_session
 from src.api.dependencies.facades import get_beer_cap_facade
 from src.api.schemas.beer.beer_response import BeerResponseWithCaps
-from src.api.schemas.beer.beer_response_base import BeerResponseBase
 from src.api.schemas.beer.beer_update import BeerUpdateSchema
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponseWithUrl
 from src.api.schemas.beer_cap.beer_cap_response_base import BeerCapResponseBase
 from src.api.schemas.common.status_response import StatusResponse
 from src.api.schemas.country.country_response_base import CountryResponseBase
+from src.api.utils import build_beer_cap_response
 from src.db.crud.beer_crud import get_all_beers, get_beer_by_id, update_beer
 from src.services.beer_cap_facade import BeerCapFacade
 
@@ -24,6 +26,47 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/beers", tags=["Beers"])
 
+@router.post(
+    "/{beer_id}/caps/",
+    response_model=BeerCapResponseWithUrl,
+    responses={
+        **NOT_FOUND_RESPONSE,
+        422: {"description": "Validation Error"},
+        **INTERNAL_SERVER_ERROR_RESPONSE,
+    },
+)
+async def create_cap_for_existing_beer(
+    beer_id: int,
+    variant_name: Optional[str] = Form(None, max_length=100),
+    collected_date: Optional[date] = Form(None),
+    file: UploadFile = File(...),
+    beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
+) -> BeerCapResponseWithUrl:
+    """
+    Upload a beer cap image for an existing beer.
+    """
+    contents = await file.read()
+
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Only image uploads are allowed.")
+
+    file_like = io.BytesIO(contents)
+    cap_metadata = BeerCapCreateSchema(
+        filename=file.filename,
+        variant_name=variant_name,
+        collected_date=collected_date,
+    )
+
+    beer_cap = await beer_cap_facade.create_cap_for_existing_beer_and_upload(
+        beer_id, cap_metadata, file_like, len(contents), file.content_type
+    )
+
+    if not beer_cap:
+        raise HTTPException(status_code=404, detail="Beer not found.")
+
+    logger.info("Uploaded new cap for beer %s, filename: %s", beer_id, file.filename)
+
+    return build_beer_cap_response(beer_cap, beer_cap_facade)
 
 @router.get(
     "/",
@@ -165,56 +208,4 @@ async def update_beer_endpoint(
 
     return BeerResponseWithCaps(
         id=updated_beer.id, name=updated_beer.name, rating=updated_beer.rating, caps=caps, country=country
-    )
-
-
-@router.post(
-    "/{beer_id}/caps/",
-    response_model=BeerCapResponseWithUrl,
-    responses={
-        **NOT_FOUND_RESPONSE,
-        422: {"description": "Validation Error"},
-        **INTERNAL_SERVER_ERROR_RESPONSE,
-    },
-)
-async def create_cap_for_existing_beer(
-    beer_id: int,
-    variant_name: Optional[str] = Form(None, max_length=100),
-    collected_date: Optional[date] = Form(None),
-    file: UploadFile = File(...),
-    beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
-) -> BeerCapResponseWithUrl:
-    """
-    Upload a beer cap image for an existing beer.
-    """
-    contents = await file.read()
-
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Only image uploads are allowed.")
-
-    file_like = io.BytesIO(contents)
-    cap_metadata = BeerCapCreateSchema(
-        filename=file.filename,
-        variant_name=variant_name,
-        collected_date=collected_date,
-    )
-
-    beer_cap = await beer_cap_facade.create_cap_for_existing_beer_and_upload(
-        beer_id, cap_metadata, file_like, len(contents), file.content_type
-    )
-
-    if not beer_cap:
-        raise HTTPException(status_code=404, detail="Beer not found.")
-
-    logger.info("Uploaded new cap for beer %s, filename: %s", beer_id, file.filename)
-
-    url = beer_cap_facade.get_presigned_url_for_cap(beer_cap.s3_key)
-    beer_response = BeerResponseBase(id=beer_cap.beer_id, name=beer_cap.beer.name, rating=beer_cap.beer.rating)
-
-    return BeerCapResponseWithUrl(
-        id=beer_cap.id,
-        variant_name=beer_cap.variant_name,
-        collected_date=beer_cap.collected_date,
-        presigned_url=url,
-        beer=beer_response,
     )

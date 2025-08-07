@@ -10,9 +10,10 @@ from src.api.constants.responses import INTERNAL_SERVER_ERROR_RESPONSE, NOT_FOUN
 from src.api.dependencies.db import get_db_session
 from src.api.dependencies.facades import get_beer_cap_facade
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
-from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponseWithUrl, BeerResponseBase
+from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponseWithUrl
 from src.api.schemas.beer_cap.beer_cap_update import BeerCapUpdateSchema
 from src.api.schemas.common.status_response import StatusResponse
+from src.api.utils import build_beer_cap_response
 from src.db.crud.beer_cap_crud import get_all_beer_caps, get_beer_cap_by_id, get_beer_caps_by_beer_id, update_beer_cap
 from src.services.beer_cap_facade import BeerCapFacade
 
@@ -59,18 +60,7 @@ async def create_cap_with_new_beer(
 
     logger.info("Uploaded beer cap for new beer: %s (filename: %s)", beer_name, file.filename)
 
-    url = beer_cap_facade.get_presigned_url_for_cap(beer_cap.s3_key)
-    beer_response = BeerResponseBase(
-        id=beer_cap.beer_id, name=beer_cap.beer.name, rating=beer_cap.beer.rating
-    )
-
-    return BeerCapResponseWithUrl(
-        id=beer_cap.id,
-        variant_name=beer_cap.variant_name,
-        collected_date=beer_cap.collected_date,
-        presigned_url=url,
-        beer=beer_response,
-    )
+    return build_beer_cap_response(beer_cap, beer_cap_facade)
 
 
 @router.get(
@@ -87,16 +77,7 @@ async def api_get_all_beer_caps(
     """
     beer_caps = await get_all_beer_caps(db, load_beer=True)
 
-    return [
-        BeerCapResponseWithUrl(
-            id=cap.id,
-            variant_name=cap.variant_name,
-            collected_date=cap.collected_date,
-            presigned_url=beer_cap_facade.get_presigned_url_for_cap(cap.s3_key),
-            beer=BeerResponseBase(id=cap.beer_id, name=cap.beer.name, rating=cap.beer.rating),
-        )
-        for cap in beer_caps
-    ]
+    return [build_beer_cap_response(cap, beer_cap_facade) for cap in beer_caps]
 
 
 @router.get(
@@ -117,16 +98,7 @@ async def get_all_caps_from_beer(
     if not beer_caps:
         raise HTTPException(status_code=404, detail="No beer caps found for this beer.")
 
-    return [
-        BeerCapResponseWithUrl(
-            id=cap.id,
-            variant_name=cap.variant_name,
-            collected_date=cap.collected_date,
-            presigned_url=beer_cap_facade.get_presigned_url_for_cap(cap.s3_key),
-            beer=BeerResponseBase(id=cap.beer_id, name=cap.beer.name, rating=cap.beer.rating),
-        )
-        for cap in beer_caps
-    ]
+    return [build_beer_cap_response(cap, beer_cap_facade) for cap in beer_caps]
 
 
 @router.get(
@@ -147,18 +119,7 @@ async def get_beer_cap(
     if not beer_cap:
         raise HTTPException(status_code=404, detail="Beer cap not found.")
 
-    url = beer_cap_facade.get_presigned_url_for_cap(beer_cap.s3_key)
-    beer_response = BeerResponseBase(
-        id=beer_cap.beer_id, name=beer_cap.beer.name, rating=beer_cap.beer.rating
-    )
-
-    return BeerCapResponseWithUrl(
-        id=beer_cap.id,
-        variant_name=beer_cap.variant_name,
-        collected_date=beer_cap.collected_date,
-        presigned_url=url,
-        beer=beer_response,
-    )
+    return build_beer_cap_response(beer_cap, beer_cap_facade)
 
 
 @router.delete(
@@ -211,15 +172,4 @@ async def update_beer_cap_endpoint(
 
     logger.info("Updated beer cap %s with data: %s", beer_cap_id, update_data.dict())
 
-    url = beer_cap_facade.get_presigned_url_for_cap(updated_cap.s3_key)
-    beer_response = BeerResponseBase(
-        id=updated_cap.beer_id, name=updated_cap.beer.name, rating=updated_cap.beer.rating
-    )
-
-    return BeerCapResponseWithUrl(
-        id=updated_cap.id,
-        variant_name=updated_cap.variant_name,
-        collected_date=updated_cap.collected_date,
-        presigned_url=url,
-        beer=beer_response,
-    )
+    return build_beer_cap_response(updated_cap, beer_cap_facade)

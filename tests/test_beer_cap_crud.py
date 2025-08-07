@@ -18,7 +18,13 @@ class TestBeerCapCRUD:
     async def _setup_beer(self, db_session: AsyncSession):
         beer_brand = await create_beer_brand(db_session, "Test Brand")
         country = await create_country(db_session, CountryCreateSchema(name="TestCountry"))
-        self.beer = await create_beer(db_session, "Test Beer For Caps", rating=5, beer_brand.id, country_id=country.id)
+        self.beer = await create_beer(
+            db_session,
+            "Test Beer For Caps",
+            beer_brand.id,
+            rating=5,
+            country_id=country.id,
+        )
         assert self.beer.id is not None
         yield
 
