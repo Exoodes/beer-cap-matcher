@@ -5,7 +5,6 @@ from typing import Dict, List, Tuple
 import numpy as np
 from PIL import Image
 
-from src.cap_detection.background_remover import BackgroundRemover
 from src.utils.logger import get_logger
 
 from .augmentation import crop_transparent, get_augmentation_pipeline
@@ -16,21 +15,19 @@ logger = get_logger(__name__)
 class ImageAugmenter:
     def __init__(
         self,
-        u2net_model_path: Path,
         augmentations_per_image: int = 10,
         image_size: Tuple[int, int] = (224, 224),
     ):
         self.augmentations_per_image = augmentations_per_image
         self.pipeline = get_augmentation_pipeline(image_size=image_size)
         self.image_size = image_size
-        self.background_remover = BackgroundRemover(model_path=u2net_model_path)
 
     def augment_image_bytes(self, image_bytes: bytes) -> List[bytes]:
-        """Augment a single image provided as bytes and return a list of augmented image bytes (including the original)."""
-
+        """
+        Augment a single image provided as bytes and return a list of
+        augmented image bytes (including the original).
+        """
         img_pil = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
-        img_pil = self.background_remover.remove_background(img_pil)
-        img_pil = crop_transparent(img_pil)
 
         img_pil = img_pil.resize(self.image_size, Image.LANCZOS)
 

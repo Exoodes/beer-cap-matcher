@@ -40,7 +40,7 @@ class CapDetectionService:
         self.index_file_name = os.getenv("MINIO_INDEX_FILE_NAME")
         self.metadata_file_name = os.getenv("MINIO_METADATA_FILE_NAME")
 
-        self.embedding_generator = EmbeddingGenerator()
+        self.embedding_generator = EmbeddingGenerator(self.u2net_model_path)
         self.index_builder = IndexBuilder()
 
     async def preprocess(self, augmentations_per_image: int) -> int:
@@ -48,7 +48,7 @@ class CapDetectionService:
 
         async with self.session_maker() as session:
             beer_caps = await get_all_beer_caps(session)
-            augmenter = ImageAugmenter(Path(self.u2net_model_path), augmentations_per_image)
+            augmenter = ImageAugmenter(augmentations_per_image=augmentations_per_image)
 
             def process_cap(cap):
                 original_bytes = self.minio_wrapper.download_bytes(self.original_caps_bucket, cap.s3_key)
