@@ -7,8 +7,6 @@ import torch
 from PIL import Image
 from torchvision.utils import save_image
 
-from src.cap_detection.augmentation import crop_transparent
-from src.cap_detection.background_remover import BackgroundRemover
 from src.cap_detection.model_loader import load_model_and_preprocess
 from src.utils.logger import get_logger
 
@@ -18,11 +16,11 @@ logger = get_logger(__name__)
 class EmbeddingGenerator:
     """Generate CLIP embeddings for images provided as bytes."""
 
-    def __init__(self, u2net_model_path: Path) -> None:
+    def __init__(self, image_size: Tuple[int, int] = (224, 224)) -> None:
         self.device: str = "cuda" if torch.cuda.is_available() else "cpu"
         self.model, self.preprocess = load_model_and_preprocess()
         self.model.eval()
-        self.background_remover = BackgroundRemover(model_path=u2net_model_path)
+        self.image_size = image_size
 
     def generate_embeddings_from_bytes(self, images: Iterable[Tuple[str, bytes]]) -> Dict[str, List]:
         """Generate embeddings directly from image bytes."""
@@ -39,12 +37,9 @@ class EmbeddingGenerator:
     def generate_embeddings(self, bytes: bytes) -> torch.Tensor:
         """
         Generate embeddings directly from image bytes.
-        This method now includes the full preprocessing pipeline.
+        This method assumes the input bytes are already preprocessed.
         """
         image = Image.open(io.BytesIO(bytes)).convert("RGBA")
-
-        image = self.background_remover.remove_background(image)
-        image = crop_transparent(image)
 
         image_array = np.array(image)
         rgb = image_array[..., :3] if image_array.shape[-1] == 4 else image_array

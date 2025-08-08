@@ -48,7 +48,9 @@ class CapDetectionService:
 
         async with self.session_maker() as session:
             beer_caps = await get_all_beer_caps(session)
-            augmenter = ImageAugmenter(augmentations_per_image=augmentations_per_image)
+            augmenter = ImageAugmenter(
+                u2net_model_path=self.u2net_model_path, augmentations_per_image=augmentations_per_image
+            )
 
             def process_cap(cap):
                 original_bytes = self.minio_wrapper.download_bytes(self.original_caps_bucket, cap.s3_key)

@@ -1,4 +1,3 @@
-import io
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
@@ -9,8 +8,8 @@ import torch
 from PIL import Image
 from torchvision.utils import save_image
 
-from src.cap_detection.augmentation import crop_transparent
 from src.cap_detection.background_remover import BackgroundRemover
+from src.cap_detection.image_processor import _process_image_for_embedding
 from src.cap_detection.model_loader import load_model_and_preprocess
 from src.utils.logger import get_logger
 
@@ -63,11 +62,12 @@ class ImageQuerier:
         return top_k_items
 
     def _process_image_bytes(self, data: bytes) -> torch.Tensor:
-        image = Image.open(io.BytesIO(data)).convert("RGBA")
-        image = self.background_remover.remove_background(image)
-        image = crop_transparent(image)
+        """
+        Processes an image from bytes using the new shared utility function.
+        """
+        processed_image = _process_image_for_embedding(data, self.background_remover, self.image_size)
 
-        image_array = np.array(image)
+        image_array = np.array(processed_image)
         rgb = image_array[..., :3] if image_array.shape[-1] == 4 else image_array
         image_pil = Image.fromarray(rgb).resize(self.image_size, Image.LANCZOS)
 
