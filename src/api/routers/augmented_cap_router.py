@@ -26,7 +26,7 @@ router = APIRouter(prefix="/augmented_caps", tags=["Augmented Caps"])
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def generate_all_augmented_caps(
-    augmentations_per_image: int = Query(..., gt=0, lt=100, description="Number of augmentations per image"),
+    augmentations_per_image: int = Query(..., gt=-1, lt=100, description="Number of augmentations per image"),
     cap_detection_service: CapDetectionService = Depends(get_cap_detection_service),
 ) -> StatusResponse:
     """

@@ -1,12 +1,13 @@
 import asyncio
 import io
 import os
-from pathlib import Path
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import Awaitable, Callable
 
-from dotenv import load_dotenv
 import faiss
+from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.cap_detection.embedding_generator import EmbeddingGenerator
@@ -27,7 +28,7 @@ class CapDetectionService:
         self,
         minio_wrapper: MinioClientWrapper,
         session_maker: Callable[[], Awaitable[AsyncSession]] = GLOBAL_ASYNC_SESSION_MAKER,
-        u2net_model_path: str | None = None
+        u2net_model_path: str | None = None,
     ) -> None:
         self.minio_wrapper = minio_wrapper
         self.session_maker = session_maker
@@ -43,17 +44,22 @@ class CapDetectionService:
         self.index_builder = IndexBuilder()
 
     async def preprocess(self, augmentations_per_image: int) -> int:
-        """Download caps, augment them and upload results back to storage."""
         created = 0
 
         async with self.session_maker() as session:
             beer_caps = await get_all_beer_caps(session)
+            augmenter = ImageAugmenter(Path(self.u2net_model_path), augmentations_per_image)
 
-            for cap in beer_caps:
+            def process_cap(cap):
                 original_bytes = self.minio_wrapper.download_bytes(self.original_caps_bucket, cap.s3_key)
-                augmenter = ImageAugmenter(Path(self.u2net_model_path), augmentations_per_image)
                 augmented_images = augmenter.augment_image_bytes(original_bytes)
+                return cap, augmented_images
 
+            loop = asyncio.get_running_loop()
+            with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+                results = await asyncio.gather(*[loop.run_in_executor(executor, process_cap, cap) for cap in beer_caps])
+
+            for cap, augmented_images in results:
                 for idx, aug_bytes in enumerate(augmented_images):
                     object_name = f"{Path(cap.s3_key).stem}_aug_{idx:03d}.png"
                     self.minio_wrapper.upload_file(
@@ -63,7 +69,6 @@ class CapDetectionService:
                     created += 1
 
             await session.commit()
-
         return created
 
     async def generate_embeddings(self) -> dict:

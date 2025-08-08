@@ -3,6 +3,7 @@ from typing import Dict, Iterable, List, Tuple
 
 import torch
 from PIL import Image
+from torchvision.utils import save_image
 
 from src.cap_detection.model_loader import load_model_and_preprocess
 from src.utils.logger import get_logger
@@ -41,6 +42,7 @@ class EmbeddingGenerator:
             image = image.convert("RGB")
 
         image_tensor = self.preprocess(image).unsqueeze(0).to(self.device)
+        save_image(image_tensor, "embed_tensor.png")
 
         with torch.no_grad():
             embedding = self.model.encode_image(image_tensor)
