@@ -33,9 +33,6 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
-      - name: Set up PostgreSQL database
-        run: python -m scripts.create_tables
-
       - name: Run tests
         run: pytest
 
