@@ -8,10 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas.augmented_beer_cap.augmented_cap_create import AugmentedCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
+from src.api.schemas.country.country_create import CountryCreateSchema
 from src.db.crud.augmented_cap_crud import get_all_augmented_caps, get_augmented_cap_by_id
 from src.db.crud.beer_brand_crud import create_beer_brand
-from src.db.crud.beer_cap_crud import get_beer_cap_by_id
-from src.db.crud.beer_crud import get_beer_by_id
+from src.db.crud.beer_cap_crud import get_all_beer_caps, get_beer_cap_by_id
+from src.db.crud.beer_crud import get_all_beers, get_beer_by_id
+from src.db.crud.country_crud import create_country
 from src.services.beer_cap_facade import BeerCapFacade
 from tests.conftest import TEST_IMAGE_CONTENT_TYPE, TEST_MINIO_ENDPOINT
 
@@ -35,7 +37,7 @@ class TestBeerCapFacade:
         beer_brand = await create_beer_brand(db_session, "Facade Beer Brand")
         beer_name = "Facade Beer 1"
         cap_filename = "cap_facade_001.jpg"
-        cap_metadata = BeerCapCreateSchema(filename=cap_filename, metadata={}, collected_date=date.today())
+        cap_metadata = BeerCapCreateSchema(filename=cap_filename, collected_date=date.today())
 
         dummy_image_file_like.seek(0)
 
@@ -71,6 +73,44 @@ class TestBeerCapFacade:
 
         print(f"✅ test_create_beer_with_cap_and_upload passed for {cap_filename}")
 
+    async def test_create_cap_and_related_entities(
+        self,
+        db_session: AsyncSession,
+        mock_minio_client_wrapper: MagicMock,
+        dummy_image_bytes: bytes,
+    ):
+        @asynccontextmanager
+        async def fake_session_maker():
+            yield db_session
+
+        facade = BeerCapFacade(minio_wrapper=mock_minio_client_wrapper, session_maker=fake_session_maker)
+
+        await create_beer_brand(db_session, "New Test Brand")
+        await create_country(db_session, CountryCreateSchema(name="New Test Country"))
+
+        cap_filename = "new_cap_and_entities.jpg"
+        cap_metadata = BeerCapCreateSchema(
+            filename=cap_filename,
+            beer_name="New Test Beer",
+            beer_brand_name="New Test Brand",
+            country_name="New Test Country",
+        )
+        image_data = io.BytesIO(dummy_image_bytes)
+        image_length = len(dummy_image_bytes)
+
+        new_beer_cap = await facade.create_cap_and_related_entities(
+            cap_metadata=cap_metadata,
+            image_data=image_data,
+            image_length=image_length,
+            content_type=TEST_IMAGE_CONTENT_TYPE,
+        )
+
+        assert new_beer_cap is not None
+        assert new_beer_cap.beer is not None
+        assert new_beer_cap.beer.name == "New Test Beer"
+        # assert new_beer_cap.beer.beer_brand.name == "New Test Brand"
+        # assert new_beer_cap.beer.country.name == "New Test Country"
+
     async def test_add_augmented_cap_and_upload(
         self,
         db_session: AsyncSession,
@@ -88,7 +128,7 @@ class TestBeerCapFacade:
         base_beer_cap = await facade.create_beer_with_cap_and_upload(
             beer_name="Base Beer for Augment",
             beer_brand_id=beer_brand.id,
-            cap_metadata=BeerCapCreateSchema(filename="base_cap.jpg", metadata={}),
+            cap_metadata=BeerCapCreateSchema(filename="base_cap.jpg"),
             image_data=io.BytesIO(b"base image"),
             image_length=len(b"base image"),
             content_type=TEST_IMAGE_CONTENT_TYPE,
@@ -98,7 +138,7 @@ class TestBeerCapFacade:
         mock_minio_client_wrapper.upload_file.reset_mock()
 
         aug_filename = "augmented_cap_001.jpg"
-        aug_metadata = AugmentedCapCreateSchema(filename=aug_filename, metadata={})
+        aug_metadata = AugmentedCapCreateSchema(filename=aug_filename)
 
         dummy_image_file_like.seek(0)
 
@@ -174,7 +214,7 @@ class TestBeerCapFacade:
         base_beer_cap = await facade.create_beer_with_cap_and_upload(
             beer_name="Base Beer for Delete Aug",
             beer_brand_id=beer_brand.id,
-            cap_metadata=BeerCapCreateSchema(filename="delete_base.jpg", metadata={}),
+            cap_metadata=BeerCapCreateSchema(filename="delete_base.jpg"),
             image_data=io.BytesIO(b"base data"),
             image_length=len(b"base data"),
             content_type=TEST_IMAGE_CONTENT_TYPE,
@@ -187,7 +227,7 @@ class TestBeerCapFacade:
             fresh_file_like = io.BytesIO(dummy_image_bytes)
             aug = await facade.add_augmented_cap_and_upload(
                 beer_cap_id=base_cap_id,
-                aug_metadata=AugmentedCapCreateSchema(filename=filename, metadata={}),
+                aug_metadata=AugmentedCapCreateSchema(filename=filename),
                 image_data=fresh_file_like,
                 image_length=len(dummy_image_bytes),
                 content_type=TEST_IMAGE_CONTENT_TYPE,
@@ -207,7 +247,53 @@ class TestBeerCapFacade:
         assert all(aug.id != ac.id for ac in aug_caps for aug in remaining_augs)
         print("✅ test_delete_augmented_caps passed")
 
-    async def test_delete_beer_cap_and_its_augmented_caps(
+    async def test_delete_all_augmented_caps(
+        self,
+        db_session: AsyncSession,
+        mock_minio_client_wrapper: MagicMock,
+        dummy_image_bytes: bytes,
+    ):
+        @asynccontextmanager
+        async def fake_session_maker():
+            yield db_session
+
+        facade = BeerCapFacade(minio_wrapper=mock_minio_client_wrapper, session_maker=fake_session_maker)
+
+        beer_brand = await create_beer_brand(db_session, "Delete All Augs Brand")
+        base_cap = await facade.create_beer_with_cap_and_upload(
+            beer_name="Base Beer for Delete All",
+            beer_brand_id=beer_brand.id,
+            cap_metadata=BeerCapCreateSchema(filename="base_cap_for_delete_all.jpg"),
+            image_data=io.BytesIO(dummy_image_bytes),
+            image_length=len(dummy_image_bytes),
+            content_type=TEST_IMAGE_CONTENT_TYPE,
+        )
+
+        await facade.add_augmented_cap_and_upload(
+            beer_cap_id=base_cap.id,
+            aug_metadata=AugmentedCapCreateSchema(filename="aug_1.jpg"),
+            image_data=io.BytesIO(dummy_image_bytes),
+            image_length=len(dummy_image_bytes),
+            content_type=TEST_IMAGE_CONTENT_TYPE,
+        )
+        await facade.add_augmented_cap_and_upload(
+            beer_cap_id=base_cap.id,
+            aug_metadata=AugmentedCapCreateSchema(filename="aug_2.jpg"),
+            image_data=io.BytesIO(dummy_image_bytes),
+            image_length=len(dummy_image_bytes),
+            content_type=TEST_IMAGE_CONTENT_TYPE,
+        )
+
+        mock_minio_client_wrapper.delete_file.reset_mock()
+        deleted_count = await facade.delete_all_augmented_caps()
+
+        assert deleted_count == 2
+        mock_minio_client_wrapper.delete_file.assert_any_call(facade.augmented_caps_bucket, "aug_1.jpg")
+        mock_minio_client_wrapper.delete_file.assert_any_call(facade.augmented_caps_bucket, "aug_2.jpg")
+        all_augs = await get_all_augmented_caps(db_session)
+        assert len(all_augs) == 0
+
+    async def test_delete_beer_and_caps(
         self,
         db_session: AsyncSession,
         mock_minio_client_wrapper: MagicMock,
@@ -226,7 +312,7 @@ class TestBeerCapFacade:
         main_beer_cap = await facade.create_beer_with_cap_and_upload(
             beer_name=beer_name,
             beer_brand_id=beer_brand.id,
-            cap_metadata=BeerCapCreateSchema(filename=cap_filename, metadata={}),
+            cap_metadata=BeerCapCreateSchema(filename=cap_filename),
             image_data=io.BytesIO(dummy_image_bytes),
             image_length=len(dummy_image_bytes),
             content_type=TEST_IMAGE_CONTENT_TYPE,
@@ -240,7 +326,7 @@ class TestBeerCapFacade:
             dummy_image_file_like.seek(0)
             aug_cap = await facade.add_augmented_cap_and_upload(
                 beer_cap_id=main_cap_id,
-                aug_metadata=AugmentedCapCreateSchema(filename=filename, metadata={}),
+                aug_metadata=AugmentedCapCreateSchema(filename=filename),
                 image_data=dummy_image_file_like,
                 image_length=len(dummy_image_bytes),
                 content_type=TEST_IMAGE_CONTENT_TYPE,
@@ -249,8 +335,8 @@ class TestBeerCapFacade:
 
         mock_minio_client_wrapper.delete_file.reset_mock()
 
-        await db_session.refresh(main_beer_cap)
-        await facade.delete_beer_cap_and_its_augmented_caps(main_cap_id)
+        deleted = await facade.delete_beer_and_caps(main_beer_cap.beer.id)
+        assert deleted is True
 
         expected_deleted_s3_keys = [main_cap_s3_key] + aug_s3_keys
         for s3_key in expected_deleted_s3_keys:
@@ -262,5 +348,5 @@ class TestBeerCapFacade:
         assert deleted_main_cap is None
 
         fetched_beer = await get_beer_by_id(db_session, main_beer_cap.beer_id)
-        assert fetched_beer is not None
-        print("✅ test_delete_beer_cap_and_its_augmented_caps passed")
+        assert fetched_beer is None
+        print("✅ test_delete_beer_and_caps passed")

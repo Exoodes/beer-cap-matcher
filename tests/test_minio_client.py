@@ -1,4 +1,5 @@
 import io
+from unittest.mock import MagicMock
 
 import pytest
 from minio.error import S3Error
@@ -73,3 +74,46 @@ class TestMinioClientIntegration:
         assert isinstance(presigned_url, str)
         assert presigned_url.startswith(f"http://{TEST_MINIO_ENDPOINT}/{TEST_BUCKET_NAME}/{object_name}")
         print(f"✅ Generated presigned URL for: {object_name}")
+
+    def test_object_exists_existing(self, real_minio_client: MinioClientWrapper, dummy_image_bytes: bytes):
+        object_name = "test_exists.jpg"
+        upload_stream = io.BytesIO(dummy_image_bytes)
+        real_minio_client.upload_file(
+            bucket_name=TEST_BUCKET_NAME,
+            object_name=object_name,
+            data=upload_stream,
+            length=len(dummy_image_bytes),
+            content_type=TEST_IMAGE_CONTENT_TYPE,
+        )
+        assert real_minio_client.object_exists(TEST_BUCKET_NAME, object_name) is True
+
+    def test_object_exists_non_existing(self, real_minio_client: MinioClientWrapper):
+        object_name = "non_existent_file.jpg"
+        assert real_minio_client.object_exists(TEST_BUCKET_NAME, object_name) is False
+
+    def test_ensure_buckets_exist_creates_new_bucket(self, real_minio_client: MinioClientWrapper):
+        bucket_name = "new-test-bucket"
+        if real_minio_client.client.bucket_exists(bucket_name):
+            real_minio_client.client.remove_bucket(bucket_name)
+
+        real_minio_client.ensure_buckets_exist([bucket_name])
+        assert real_minio_client.client.bucket_exists(bucket_name) is True
+        real_minio_client.client.remove_bucket(bucket_name)
+
+    def test_download_all_objects_parallel(self, real_minio_client: MinioClientWrapper, dummy_image_bytes: bytes):
+        object_names = ["test_parallel_1.jpg", "test_parallel_2.jpg", "test_parallel_3.jpg"]
+        for name in object_names:
+            real_minio_client.upload_file(
+                bucket_name=TEST_BUCKET_NAME,
+                object_name=name,
+                data=io.BytesIO(dummy_image_bytes),
+                length=len(dummy_image_bytes),
+                content_type=TEST_IMAGE_CONTENT_TYPE,
+            )
+
+        downloaded_objects = real_minio_client.download_all_objects_parallel(TEST_BUCKET_NAME)
+        downloaded_names = [name for name, _ in downloaded_objects]
+
+        assert len(downloaded_objects) == len(object_names)
+        for name in object_names:
+            assert name in downloaded_names
