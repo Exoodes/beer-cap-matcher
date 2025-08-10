@@ -1,0 +1,44 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Write .env from secret
+        run: |
+          # preserves newlines exactly
+          printf '%s' "${{ secrets.ENV_FILE }}" > .env
+
+      - name: Start test services
+        run: |
+          docker compose -f docker-compose.test.yml up -d
+          echo "Waiting for services to be ready..."
+          sleep 10
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Set up PostgreSQL database
+        run: python -m scripts.create_tables
+
+      - name: Run tests
+        run: pytest
+
+      - name: Stop services
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v
