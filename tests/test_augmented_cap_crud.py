@@ -1,5 +1,6 @@
-import pytest
 from datetime import date
+
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
@@ -35,9 +36,7 @@ class TestAugmentedCapCRUD:
             db_session,
             self.beer.id,
             "base_cap_for_aug_tests.jpg",
-            BeerCapCreateSchema(
-                filename="base_cap_for_aug_tests.jpg", collected_date=date.today()
-            ),
+            BeerCapCreateSchema(filename="base_cap_for_aug_tests.jpg", collected_date=date.today()),
         )
         assert self.beer_cap.id is not None
         yield

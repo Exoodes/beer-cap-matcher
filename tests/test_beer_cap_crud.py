@@ -1,5 +1,6 @@
-import pytest
 from datetime import date
+
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema

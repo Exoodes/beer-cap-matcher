@@ -1,3 +1,5 @@
+# File: src/api/routers/beer_cap_router.py
+
 import io
 import logging
 from datetime import date
@@ -26,20 +28,28 @@ router = APIRouter(prefix="/beer_caps", tags=["Beer Caps"])
     "/",
     response_model=BeerCapResponseWithUrl,
     responses={
+        404: {"description": "Beer not found"},
         422: {"description": "Validation Error"},
         **INTERNAL_SERVER_ERROR_RESPONSE,
     },
 )
-async def create_cap_with_new_beer(
-    beer_name: str = Form(..., min_length=1, max_length=100),
-    beer_brand_id: int = Form(..., ge=1),
+async def create_cap_endpoint(
+    file: UploadFile = File(...),
     variant_name: Optional[str] = Form(None, max_length=100),
     collected_date: Optional[date] = Form(None),
-    file: UploadFile = File(...),
+    beer_id: Optional[int] = Form(None, ge=1),
+    beer_name: Optional[str] = Form(None, min_length=1, max_length=100),
+    beer_brand_id: Optional[int] = Form(None, ge=1),
+    beer_brand_name: Optional[str] = Form(None, min_length=1, max_length=100),
+    country_id: Optional[int] = Form(None, ge=1),
+    country_name: Optional[str] = Form(None, min_length=1, max_length=100),
     beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
 ) -> BeerCapResponseWithUrl:
     """
-    Upload a beer cap image for a new beer (creates the beer entry as well).
+    Creates a new beer cap. Can optionally create a new beer, beer brand, and/or country.
+    - If `beer_id` is provided, a new cap is added to that existing beer.
+    - If `beer_name` is provided, a new beer is created. The beer brand and country
+      will be linked by ID or created by name based on the provided values.
     """
     contents = await file.read()
 
@@ -48,17 +58,29 @@ async def create_cap_with_new_beer(
 
     file_like = io.BytesIO(contents)
 
-    cap_metadata = BeerCapCreateSchema(
+    cap_data = BeerCapCreateSchema(
         filename=file.filename,
         variant_name=variant_name,
         collected_date=collected_date,
+        beer_id=beer_id,
+        beer_name=beer_name,
+        beer_brand_id=beer_brand_id,
+        beer_brand_name=beer_brand_name,
+        country_id=country_id,
+        country_name=country_name,
     )
 
-    beer_cap = await beer_cap_facade.create_beer_with_cap_and_upload(
-        beer_name, beer_brand_id, cap_metadata, file_like, len(contents), file.content_type
+    beer_cap = await beer_cap_facade.create_cap_and_related_entities(
+        cap_metadata=cap_data,
+        image_data=file_like,
+        image_length=len(contents),
+        content_type=file.content_type,
     )
 
-    logger.info("Uploaded beer cap for new beer: %s (filename: %s)", beer_name, file.filename)
+    if not beer_cap:
+        raise HTTPException(status_code=404, detail="Beer not found.")
+
+    logger.info("Successfully created beer cap %s for beer %s", beer_cap.id, beer_cap.beer.name)
 
     return build_beer_cap_response(beer_cap, beer_cap_facade)
 

@@ -1,11 +1,10 @@
-from contextlib import asynccontextmanager
 import io
+from contextlib import asynccontextmanager
+from datetime import date
 from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from datetime import date
 
 from src.api.schemas.augmented_beer_cap.augmented_cap_create import AugmentedCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
@@ -36,9 +35,7 @@ class TestBeerCapFacade:
         beer_brand = await create_beer_brand(db_session, "Facade Beer Brand")
         beer_name = "Facade Beer 1"
         cap_filename = "cap_facade_001.jpg"
-        cap_metadata = BeerCapCreateSchema(
-            filename=cap_filename, metadata={}, collected_date=date.today()
-        )
+        cap_metadata = BeerCapCreateSchema(filename=cap_filename, metadata={}, collected_date=date.today())
 
         dummy_image_file_like.seek(0)
 

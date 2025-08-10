@@ -6,12 +6,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas.augmented_beer_cap.augmented_cap_create import AugmentedCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
+from src.api.schemas.country.country_create import CountryCreateSchema
 from src.db.crud.augmented_cap_crud import create_augmented_cap, delete_augmented_cap, get_all_augmented_caps
+from src.db.crud.beer_brand_crud import create_beer_brand, get_beer_brand_by_id, get_beer_brand_by_name
 from src.db.crud.beer_cap_crud import create_beer_cap, get_beer_cap_by_id
 from src.db.crud.beer_crud import create_beer, get_beer_by_id
+from src.db.crud.country_crud import create_country, get_country_by_id, get_country_by_name
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
 from src.db.entities.augmented_cap_entity import AugmentedCap
+from src.db.entities.beer_brand_entity import BeerBrand
 from src.db.entities.beer_cap_entity import BeerCap
+from src.db.entities.country_entity import Country
 from src.storage.minio.minio_client import MinioClientWrapper
 
 load_dotenv()
@@ -31,6 +36,78 @@ class BeerCapFacade:
 
         if not self.original_caps_bucket or not self.augmented_caps_bucket:
             raise ValueError("MINIO_ORIGINAL_CAPS_BUCKET and MINIO_AUGMENTED_CAPS_BUCKET must be set in .env")
+
+    async def get_or_create_beer_brand(
+        self, session: AsyncSession, beer_brand_id: Optional[int], beer_brand_name: Optional[str]
+    ) -> BeerBrand:
+        if beer_brand_id:
+            beer_brand = await get_beer_brand_by_id(session, beer_brand_id)
+            if not beer_brand:
+                raise ValueError("Beer brand not found")
+        elif beer_brand_name:
+            beer_brand = await get_beer_brand_by_name(session, beer_brand_name)
+            if not beer_brand:
+                beer_brand = await create_beer_brand(session, beer_brand_name, commit=False)
+        else:
+            raise ValueError("Beer brand ID or name is required.")
+        return beer_brand
+
+    async def get_or_create_country(
+        self, session: AsyncSession, country_id: Optional[int], country_name: Optional[str]
+    ) -> Optional[Country]:
+        if country_id:
+            country = await get_country_by_id(session, country_id)
+            if not country:
+                raise ValueError("Country not found")
+            return country
+        elif country_name:
+            country = await get_country_by_name(session, country_name)
+            if not country:
+                country = await create_country(
+                    session, CountryCreateSchema(name=country_name, description=""), commit=False
+                )
+            return country
+        return None
+
+    async def create_cap_and_related_entities(
+        self,
+        cap_metadata: BeerCapCreateSchema,
+        image_data: BinaryIO,
+        image_length: int,
+        content_type: str = "image/png",
+    ) -> Optional[BeerCap]:
+        async with self.session_maker() as session:
+            if cap_metadata.beer_id:
+                beer = await get_beer_by_id(session, cap_metadata.beer_id)
+                if not beer:
+                    return None
+
+            elif cap_metadata.beer_name:
+                beer_brand = await self.get_or_create_beer_brand(
+                    session, cap_metadata.beer_brand_id, cap_metadata.beer_brand_name
+                )
+                country = await self.get_or_create_country(session, cap_metadata.country_id, cap_metadata.country_name)
+
+                beer = await create_beer(
+                    session,
+                    name=cap_metadata.beer_name,
+                    beer_brand_id=beer_brand.id,
+                    country_id=country.id if country else None,
+                    commit=False,
+                )
+            else:
+                return None
+
+            object_name = cap_metadata.filename
+            self.minio_wrapper.upload_file(
+                self.original_caps_bucket, object_name, image_data, image_length, content_type
+            )
+            beer_cap = await create_beer_cap(session, beer.id, object_name, cap_metadata)
+
+            await session.commit()
+
+            beer_cap = await get_beer_cap_by_id(session, beer_cap.id, load_beer=True)
+            return beer_cap
 
     async def create_beer_with_cap_and_upload(
         self,

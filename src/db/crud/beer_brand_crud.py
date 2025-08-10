@@ -8,9 +8,7 @@ from src.api.schemas.beer_brand.beer_brand_update import BeerBrandUpdateSchema
 from src.db.entities.beer_brand_entity import BeerBrand
 
 
-async def create_beer_brand(
-    session: AsyncSession, name: str, commit: bool = True
-) -> BeerBrand:
+async def create_beer_brand(session: AsyncSession, name: str, commit: bool = True) -> BeerBrand:
     beer_brand = BeerBrand(name=name)
     session.add(beer_brand)
 
@@ -33,9 +31,14 @@ async def get_beer_brand_by_id(
     return result.scalar_one_or_none()
 
 
-async def get_all_beer_brands(
-    session: AsyncSession, load_beers: bool = False
-) -> List[BeerBrand]:
+async def get_beer_brand_by_name(session: AsyncSession, name: str) -> Optional[BeerBrand]:
+    """Retrieves a single beer brand by its name."""
+    stmt = select(BeerBrand).where(BeerBrand.name == name)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def get_all_beer_brands(session: AsyncSession, load_beers: bool = False) -> List[BeerBrand]:
     stmt = select(BeerBrand)
     if load_beers:
         stmt = stmt.options(selectinload(BeerBrand.beers))

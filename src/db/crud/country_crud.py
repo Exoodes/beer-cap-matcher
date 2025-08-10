@@ -9,9 +9,7 @@ from src.api.schemas.country.country_update import CountryUpdateSchema
 from src.db.entities.country_entity import Country
 
 
-async def create_country(
-    session: AsyncSession, data: CountryCreateSchema, commit: bool = True
-) -> Country:
+async def create_country(session: AsyncSession, data: CountryCreateSchema, commit: bool = True) -> Country:
     country = Country(name=data.name, description=data.description)
     session.add(country)
 
@@ -34,6 +32,13 @@ async def get_country_by_id(
     if load_beers:
         stmt = stmt.options(selectinload(Country.beers))
 
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def get_country_by_name(session: AsyncSession, name: str) -> Optional[Country]:
+    """Retrieves a single country by its name."""
+    stmt = select(Country).where(Country.name == name)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
