@@ -1,11 +1,9 @@
-import os
 from typing import Tuple
 
-from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-load_dotenv()
+from src.config.settings import settings
 
 
 def get_db_resources(database_url: str, echo: bool = False) -> Tuple[AsyncEngine, sessionmaker]:
@@ -15,7 +13,7 @@ def get_db_resources(database_url: str, echo: bool = False) -> Tuple[AsyncEngine
     return engine, async_session
 
 
-GLOBAL_DATABASE_URL = os.getenv("POSTGRES_DATABASE_URL")
+GLOBAL_DATABASE_URL = settings.postgres_database_url
 if not GLOBAL_DATABASE_URL:
     raise ValueError("POSTGRES_DATABASE_URL environment variable is not set.")
 

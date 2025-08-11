@@ -3,8 +3,6 @@ import os
 from pathlib import Path
 from typing import Any, Dict
 
-from dotenv import load_dotenv
-
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.api.schemas.country.country_create import CountryCreateSchema
 from src.db.beer_caps_seed import data as BEER_CAPS_DATA
@@ -20,7 +18,6 @@ IMAGE_DIR = Path("data/images")
 
 async def seed_beer_caps(data: Dict[str, Dict[str, Dict[str, list[Dict[str, Any]]]]]) -> None:
     """Seed database and MinIO with initial beer cap data."""
-    load_dotenv()
     minio_wrapper = MinioClientWrapper()
     facade = BeerCapFacade(minio_wrapper)
 

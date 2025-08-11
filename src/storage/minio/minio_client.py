@@ -6,6 +6,7 @@ from typing import BinaryIO, Optional
 from minio import Minio
 from minio.error import S3Error
 
+from src.config.settings import settings
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -29,10 +30,10 @@ class MinioClientWrapper:
             secret_key (Optional[str]): Secret key for authentication.
             secure (Optional[bool]): Use HTTPS if True.
         """
-        minio_endpoint = endpoint if endpoint is not None else os.getenv("MINIO_ENDPOINT", "localhost:9000")
-        minio_access_key = access_key if access_key is not None else os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-        minio_secret_key = secret_key if secret_key is not None else os.getenv("MINIO_SECRET_KEY", "minioadmin")
-        minio_secure = secure if secure is not None else (os.getenv("MINIO_SECURE", "false").lower() == "true")
+        minio_endpoint = endpoint if endpoint is not None else settings.minio_endpoint
+        minio_access_key = access_key if access_key is not None else settings.minio_access_key
+        minio_secret_key = secret_key if secret_key is not None else settings.minio_secret_key
+        minio_secure = secure if secure is not None else settings.minio_secure
 
         self.client = Minio(
             minio_endpoint,

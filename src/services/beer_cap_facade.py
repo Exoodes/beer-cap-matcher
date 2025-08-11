@@ -1,12 +1,11 @@
-import os
 from typing import Awaitable, BinaryIO, Callable, Optional
 
-from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas.augmented_beer_cap.augmented_cap_create import AugmentedCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.api.schemas.country.country_create import CountryCreateSchema
+from src.config.settings import settings
 from src.db.crud.augmented_cap_crud import create_augmented_cap, delete_augmented_cap, get_all_augmented_caps
 from src.db.crud.beer_brand_crud import create_beer_brand, get_beer_brand_by_id, get_beer_brand_by_name
 from src.db.crud.beer_cap_crud import create_beer_cap, get_beer_cap_by_id
@@ -19,8 +18,6 @@ from src.db.entities.beer_cap_entity import BeerCap
 from src.db.entities.country_entity import Country
 from src.storage.minio.minio_client import MinioClientWrapper
 
-load_dotenv()
-
 
 class BeerCapFacade:
     def __init__(
@@ -31,8 +28,8 @@ class BeerCapFacade:
         self.minio_wrapper = minio_wrapper
         self.session_maker = session_maker
 
-        self.original_caps_bucket = os.getenv("MINIO_ORIGINAL_CAPS_BUCKET")
-        self.augmented_caps_bucket = os.getenv("MINIO_AUGMENTED_CAPS_BUCKET")
+        self.original_caps_bucket = settings.minio_original_caps_bucket
+        self.augmented_caps_bucket = settings.minio_augmented_caps_bucket
 
         if not self.original_caps_bucket or not self.augmented_caps_bucket:
             raise ValueError("MINIO_ORIGINAL_CAPS_BUCKET and MINIO_AUGMENTED_CAPS_BUCKET must be set in .env")

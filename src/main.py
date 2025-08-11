@@ -1,19 +1,16 @@
 import argparse
-import os
 from pathlib import Path
 from typing import List, Optional
-
-from dotenv import load_dotenv
 
 from src.cap_detection.embedding_generator import EmbeddingGenerator
 from src.cap_detection.image_querier import AggregatedResult, ImageQuerier
 from src.cap_detection.index_builder import IndexBuilder
 from src.cap_detection.indexer.index_loader import IndexLoader
 from src.cap_detection.preprocessing.image_processor import ImageAugmenter
+from src.config.settings import settings
 from src.scripts.download_u2net import download_u2net_model
 from src.utils.logger import get_logger
 
-load_dotenv()
 logger = get_logger(__name__)
 
 
@@ -21,14 +18,14 @@ class BeerCapMatcherApp:
     def __init__(self, initialize_all: bool = True):
         logger.info("Initializing BeerCapMatcherApp...")
 
-        self.raw_data_dir = os.getenv("RAW_DATA_DIR")
-        self.augmented_data_dir = os.getenv("AUGMENTED_DATA_DIR")
-        self.u2net_model_path = os.getenv("U2NET_MODEL_PATH")
-        self.augmentation_map_path = os.getenv("AUGMENTATION_MAP_PATH")
-        self.embeddings_output_path = os.getenv("EMBEDDINGS_OUTPUT_PATH")
-        self.faiss_index_path = os.getenv("FAISS_INDEX_PATH")
-        self.faiss_metadata_path = os.getenv("FAISS_METADATA_PATH")
-        self.augmentations_per_image = int(os.getenv("AUGMENTATIONS_PER_IMAGE", 20))
+        self.raw_data_dir = settings.raw_data_dir
+        self.augmented_data_dir = settings.augmented_data_dir
+        self.u2net_model_path = settings.u2net_model_path
+        self.augmentation_map_path = settings.augmentation_map_path
+        self.embeddings_output_path = settings.embeddings_output_path
+        self.faiss_index_path = settings.faiss_index_path
+        self.faiss_metadata_path = settings.faiss_metadata_path
+        self.augmentations_per_image = settings.augmentations_per_image
 
         self.augmenter: Optional[ImageAugmenter] = None
         self.embedding_generator: Optional[EmbeddingGenerator] = None

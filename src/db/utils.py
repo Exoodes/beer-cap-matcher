@@ -1,9 +1,5 @@
-from dotenv import load_dotenv
-
 from src.db.database import GLOBAL_ENGINE
 from src.db.entities import Base
-
-load_dotenv()
 
 
 async def initialize_database() -> None:
