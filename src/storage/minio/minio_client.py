@@ -12,9 +12,10 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-class MinioClientWrapper:
-    """A wrapper around the MinIO client for simplified object storage operations."""
+from urllib.parse import urlparse
 
+
+class MinioClientWrapper:
     def __init__(
         self,
         endpoint: Optional[str] = None,
@@ -22,24 +23,33 @@ class MinioClientWrapper:
         secret_key: Optional[str] = None,
         secure: Optional[bool] = None,
     ) -> None:
-        """Initializes the MinIO client with given or environment configuration.
+        raw = (endpoint if endpoint is not None else settings.minio_endpoint).strip()
 
-        Args:
-            endpoint (Optional[str]): MinIO server endpoint (host:port).
-            access_key (Optional[str]): Access key for authentication.
-            secret_key (Optional[str]): Secret key for authentication.
-            secure (Optional[bool]): Use HTTPS if True.
-        """
-        minio_endpoint = endpoint if endpoint is not None else settings.minio_endpoint
-        minio_access_key = access_key if access_key is not None else settings.minio_access_key
-        minio_secret_key = secret_key if secret_key is not None else settings.minio_secret_key
-        minio_secure = secure if secure is not None else settings.minio_secure
+        # Normalize: add scheme if missing so urlparse works consistently
+        parsed = urlparse(raw if "://" in raw else f"http://{raw}")
+
+        # If a path sneaks in (including trailing "/"), strip it but WARN so you can fix envs
+        if parsed.path and parsed.path != "":
+            logger.warning("MINIO_ENDPOINT contained a path '%s' -> stripping it. Raw: %r", parsed.path, raw)
+
+        host = parsed.hostname or ""
+        port = (
+            f":{parsed.port}" if parsed.port else (f":{parsed.netloc.split(':',1)[1]}" if ":" in parsed.netloc else "")
+        )
+        hostport = f"{host}{port}" if host else (parsed.netloc or raw.split("/", 1)[0])
+
+        # Decide secure: prefer scheme if present, otherwise use provided flag/env
+        secure_flag = (
+            (parsed.scheme == "https") if parsed.scheme else (secure if secure is not None else settings.minio_secure)
+        )
+
+        logger.info("Initializing MinIO client with endpoint=%r (normalized=%r), secure=%s", raw, hostport, secure_flag)
 
         self.client = Minio(
-            minio_endpoint,
-            access_key=minio_access_key,
-            secret_key=minio_secret_key,
-            secure=minio_secure,
+            hostport,
+            access_key=access_key or settings.minio_access_key,
+            secret_key=secret_key or settings.minio_secret_key,
+            secure=secure_flag,
         )
 
     def upload_file(

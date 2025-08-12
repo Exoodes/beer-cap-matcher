@@ -73,5 +73,11 @@ app.include_router(beer_brand_router.router)
 
 app.router.redirect_slashes = True
 
+
+@app.get("/health", tags=["health"])
+async def health() -> dict[str, str]:
+    """Health check endpoint."""
+    return {"status": "ok"}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
