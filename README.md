@@ -1,5 +1,7 @@
 # Beer Cap Matcher
 
+[![CI](https://github.com/OWNER/beer-cap-matcher/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/beer-cap-matcher/actions/workflows/ci.yml)
+
 This project provides a FastAPI service for matching beer caps using image embeddings and FAISS.
 
 ## Running with Docker Compose
