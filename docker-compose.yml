@@ -11,6 +11,11 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   minio:
     image: minio/minio
@@ -24,6 +29,51 @@ services:
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
       - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  init_db:
+    build: .
+    container_name: beercap_init
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    environment:
+      POSTGRES_DATABASE_URL: postgresql+asyncpg://beercap_user_postgres:beercap_pass_postgres@db:5432/beercap_db_postgres
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_SECURE: "false"
+    command: >
+      sh -c "python -m scripts.create_tables && python -m scripts.setup_minio"
+
+  api:
+    build: .
+    container_name: beercap_api
+    depends_on:
+      init_db:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_DATABASE_URL: postgresql+asyncpg://beercap_user_postgres:beercap_pass_postgres@db:5432/beercap_db_postgres
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_SECURE: "false"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
 
 volumes:
   pgdata:
