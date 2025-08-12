@@ -42,6 +42,7 @@ psycopg2-binary==2.9.10
 pycparser==2.22
 pycryptodome==3.23.0
 pydantic==2.11.7
+pydantic-settings==2.2.1
 pydantic_core==2.33.2
 Pygments==2.19.2
 PySocks==1.7.1

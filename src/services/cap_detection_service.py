@@ -7,18 +7,16 @@ from pathlib import Path
 from typing import Awaitable, Callable
 
 import faiss
-from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.cap_detection.embedding_generator import EmbeddingGenerator
 from src.cap_detection.image_processor import ImageAugmenter
 from src.cap_detection.index_builder import IndexBuilder
+from src.config.settings import settings
 from src.db.crud.augmented_cap_crud import create_augmented_cap, get_all_augmented_caps
 from src.db.crud.beer_cap_crud import get_all_beer_caps
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
 from src.storage.minio.minio_client import MinioClientWrapper
-
-load_dotenv()
 
 
 class CapDetectionService:
@@ -33,12 +31,12 @@ class CapDetectionService:
         self.minio_wrapper = minio_wrapper
         self.session_maker = session_maker
 
-        self.original_caps_bucket = os.getenv("MINIO_ORIGINAL_CAPS_BUCKET")
-        self.augmented_caps_bucket = os.getenv("MINIO_AUGMENTED_CAPS_BUCKET")
-        self.index_bucket = os.getenv("MINIO_INDEX_BUCKET")
-        self.u2net_model_path = u2net_model_path or os.getenv("U2NET_MODEL_PATH")
-        self.index_file_name = os.getenv("MINIO_INDEX_FILE_NAME")
-        self.metadata_file_name = os.getenv("MINIO_METADATA_FILE_NAME")
+        self.original_caps_bucket = settings.minio_original_caps_bucket
+        self.augmented_caps_bucket = settings.minio_augmented_caps_bucket
+        self.index_bucket = settings.minio_augmented_caps_bucket
+        self.u2net_model_path = u2net_model_path or settings.u2net_model_path
+        self.index_file_name = settings.minio_index_file_name
+        self.metadata_file_name = settings.minio_metadata_file_name
 
         self.embedding_generator = EmbeddingGenerator(self.u2net_model_path)
         self.index_builder = IndexBuilder()

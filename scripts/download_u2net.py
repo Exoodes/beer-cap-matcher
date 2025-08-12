@@ -3,6 +3,8 @@ from typing import Optional
 
 import gdown
 
+from src.config.settings import settings
+
 
 def download_u2net_model(model_path: Optional[str] = None) -> None:
     """Downloads the U²-Net model from Google Drive.
@@ -17,7 +19,7 @@ def download_u2net_model(model_path: Optional[str] = None) -> None:
             variable is not set.
     """
     if model_path is None:
-        model_path = os.getenv("U2NET_MODEL_PATH", "data/models/u2net.pth")
+        model_path = settings.u2net_model_path or "data/models/u2net.pth"
 
     if not os.path.exists(model_path):
         model_dir = os.path.dirname(model_path)

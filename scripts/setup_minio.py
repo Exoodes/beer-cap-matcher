@@ -1,8 +1,6 @@
 import asyncio
-import os
 
-from dotenv import load_dotenv
-
+from src.config.settings import settings
 from src.storage.minio.minio_client import MinioClientWrapper
 
 
@@ -16,20 +14,14 @@ async def ensure_buckets_exist() -> None:
     Raises:
         ValueError: If any of the required bucket environment variables are not set.
     """
-    load_dotenv()
-
-    bucket_env_vars = [
-        "MINIO_ORIGINAL_CAPS_BUCKET",
-        "MINIO_AUGMENTED_CAPS_BUCKET",
-        "MINIO_INDEX_BUCKET",
+    buckets = [
+        settings.minio_original_caps_bucket,
+        settings.minio_augmented_caps_bucket,
+        settings.minio_augmented_caps_bucket,
     ]
 
-    buckets = []
-    for var in bucket_env_vars:
-        value = os.getenv(var)
-        if value is None:
-            raise ValueError(f"Error: Environment variable '{var}' is not set.")
-        buckets.append(value)
+    if not all(buckets):
+        raise ValueError("One or more required MINIO_*_BUCKET environment variables are not set.")
 
     minio_wrapper = MinioClientWrapper()
     minio_wrapper.ensure_buckets_exist(buckets)

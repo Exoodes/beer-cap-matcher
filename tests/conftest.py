@@ -1,33 +1,30 @@
 import asyncio
 import io
-import os
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Generator
 from unittest.mock import MagicMock
 
 import pytest
-from dotenv import load_dotenv
 from pytest_asyncio import fixture as async_fixture
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config.settings import settings
 from src.db.database import get_db_resources
 from src.db.entities import Base
 from src.storage.minio.minio_client import MinioClientWrapper
 
-load_dotenv()
-
-TEST_BUCKET_NAME = os.getenv("TEST_MINIO_BUCKET_NAME")
+TEST_BUCKET_NAME = settings.test_minio_bucket_name
 TEST_DUMMY_IMAGE_PATH = Path("tests/data/test_image.jpg")
 TEST_IMAGE_CONTENT_TYPE = "image/jpeg"
 
-TEST_POSTGRES_DATABASE_URL = os.getenv("TEST_POSTGRES_DATABASE_URL")
+TEST_POSTGRES_DATABASE_URL = settings.test_postgres_database_url
 if not TEST_POSTGRES_DATABASE_URL:
     raise ValueError("TEST_POSTGRES_DATABASE_URL environment variable is not set in .env or your shell.")
 
-TEST_MINIO_ENDPOINT = os.getenv("TEST_MINIO_URL")
-TEST_MINIO_ACCESS_KEY = os.getenv("TEST_MINIO_ACCESS_KEY")
-TEST_MINIO_SECRET_KEY = os.getenv("TEST_MINIO_SECRET_KEY")
+TEST_MINIO_ENDPOINT = settings.test_minio_url
+TEST_MINIO_ACCESS_KEY = settings.test_minio_access_key
+TEST_MINIO_SECRET_KEY = settings.test_minio_secret_key
 
 if not all([TEST_MINIO_ENDPOINT, TEST_MINIO_ACCESS_KEY, TEST_MINIO_SECRET_KEY]):
     raise ValueError("One or more TEST_MINIO_* environment variables are not set in .env or your shell.")
@@ -71,7 +68,7 @@ def real_minio_client() -> Generator[MinioClientWrapper, None, None]:
         endpoint=TEST_MINIO_ENDPOINT,
         access_key=TEST_MINIO_ACCESS_KEY,
         secret_key=TEST_MINIO_SECRET_KEY,
-        secure=os.getenv("MINIO_SECURE", "false").lower() == "true",
+        secure=settings.minio_secure,
     )
     client.ensure_buckets_exist([TEST_BUCKET_NAME])
     yield client

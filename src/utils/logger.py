@@ -1,12 +1,13 @@
 import logging
-import os
 import warnings
 
 from colorlog import ColoredFormatter
 
+from src.config.settings import settings
+
 
 def setup_logging():
-    log_level_str = os.getenv("LOG_LEVEL", "INFO").upper()
+    log_level_str = settings.log_level.upper()
     log_level = getattr(logging, log_level_str, logging.INFO)
 
     formatter = ColoredFormatter(
