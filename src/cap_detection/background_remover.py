@@ -21,7 +21,9 @@ class BackgroundRemover:
         self.model.to(self.device)
         self.model.eval()
 
-        self.transform = transforms.Compose([transforms.Resize((320, 320)), transforms.ToTensor()])
+        self.transform = transforms.Compose(
+            [transforms.Resize((320, 320)), transforms.ToTensor()]
+        )
 
     def remove_background(self, image: Union[Image.Image, np.ndarray]) -> Image.Image:
         if isinstance(image, np.ndarray):

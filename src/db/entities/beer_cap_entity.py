@@ -22,7 +22,9 @@ class BeerCap(Base):
     beer_id = Column(Integer, ForeignKey("beers.id"), nullable=False)
     beer = relationship("Beer", back_populates="caps")
 
-    augmented_caps = relationship("AugmentedCap", back_populates="beer_cap", cascade="all, delete-orphan")
+    augmented_caps = relationship(
+        "AugmentedCap", back_populates="beer_cap", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return (

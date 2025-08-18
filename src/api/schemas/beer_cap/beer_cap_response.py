@@ -10,7 +10,9 @@ class BeerCapResponseWithUrl(BeerCapResponseBase):
     and associated beer information.
     """
 
-    presigned_url: str = Field(..., description="Temporary URL to access the beer cap image")
+    presigned_url: str = Field(
+        ..., description="Temporary URL to access the beer cap image"
+    )
     beer: BeerResponseBase = Field(..., description="Beer to which this cap belongs")
 
     model_config = ConfigDict(from_attributes=True, extra="forbid")

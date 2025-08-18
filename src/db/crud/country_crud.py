@@ -9,7 +9,9 @@ from src.api.schemas.country.country_update import CountryUpdateSchema
 from src.db.entities.country_entity import Country
 
 
-async def create_country(session: AsyncSession, data: CountryCreateSchema, commit: bool = True) -> Country:
+async def create_country(
+    session: AsyncSession, data: CountryCreateSchema, commit: bool = True
+) -> Country:
     country = Country(name=data.name, description=data.description)
     session.add(country)
 

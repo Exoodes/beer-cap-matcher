@@ -10,10 +10,18 @@ class QueryResultResponse(BaseModel):
     Contains distance metrics and match count.
     """
 
-    mean_distance: float = Field(..., description="Average embedding distance to the query")
-    min_distance: float = Field(..., description="Minimum embedding distance to the query")
-    max_distance: float = Field(..., description="Maximum embedding distance to the query")
-    match_count: int = Field(..., description="Number of matched augmented caps for this beer cap")
+    mean_distance: float = Field(
+        ..., description="Average embedding distance to the query"
+    )
+    min_distance: float = Field(
+        ..., description="Minimum embedding distance to the query"
+    )
+    max_distance: float = Field(
+        ..., description="Maximum embedding distance to the query"
+    )
+    match_count: int = Field(
+        ..., description="Number of matched augmented caps for this beer cap"
+    )
 
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
@@ -34,8 +42,11 @@ class BeerCapResponseWithQueryResult(BaseModel):
         default=None,
         description="Date when this cap was collected",
     )
-    presigned_url: str = Field(..., description="Presigned URL to access the beer cap image")
-    query_result: QueryResultResponse = Field(..., description="Similarity metrics for this result")
+    presigned_url: str = Field(
+        ..., description="Presigned URL to access the beer cap image"
+    )
+    query_result: QueryResultResponse = Field(
+        ..., description="Similarity metrics for this result"
+    )
 
     model_config = ConfigDict(from_attributes=True, extra="forbid")
-

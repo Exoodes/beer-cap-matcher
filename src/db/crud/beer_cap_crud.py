@@ -10,7 +10,11 @@ from src.db.entities.beer_cap_entity import BeerCap
 
 
 async def create_beer_cap(
-    session: AsyncSession, beer_id: int, s3_key: str, data: BeerCapCreateSchema, commit: bool = True
+    session: AsyncSession,
+    beer_id: int,
+    s3_key: str,
+    data: BeerCapCreateSchema,
+    commit: bool = True,
 ) -> BeerCap:
     new_cap = BeerCap(
         beer_id=beer_id,

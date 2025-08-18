@@ -26,7 +26,9 @@ class TestBeerCapCRUD:
     @pytest.fixture(autouse=True)
     async def _setup_beer(self, db_session: AsyncSession):
         beer_brand = await create_beer_brand(db_session, "Test Brand")
-        country = await create_country(db_session, CountryCreateSchema(name="TestCountry"))
+        country = await create_country(
+            db_session, CountryCreateSchema(name="TestCountry")
+        )
         self.beer = await create_beer(
             db_session,
             "Test Beer For Caps",
@@ -56,7 +58,9 @@ class TestBeerCapCRUD:
             db_session,
             self.beer.id,
             "fetched_cap_s3_key.jpg",
-            BeerCapCreateSchema(filename="fetched_cap_s3_key.jpg", collected_date=date.today()),
+            BeerCapCreateSchema(
+                filename="fetched_cap_s3_key.jpg", collected_date=date.today()
+            ),
         )
         fetched_cap = await get_beer_cap_by_id(db_session, created_cap.id)
         assert fetched_cap is not None
@@ -69,13 +73,17 @@ class TestBeerCapCRUD:
             db_session,
             beer_id,
             "cap_for_beer_1.jpg",
-            BeerCapCreateSchema(filename="cap_for_beer_1.jpg", collected_date=date.today()),
+            BeerCapCreateSchema(
+                filename="cap_for_beer_1.jpg", collected_date=date.today()
+            ),
         )
         await create_beer_cap(
             db_session,
             beer_id,
             "cap_for_beer_2.jpg",
-            BeerCapCreateSchema(filename="cap_for_beer_2.jpg", collected_date=date.today()),
+            BeerCapCreateSchema(
+                filename="cap_for_beer_2.jpg", collected_date=date.today()
+            ),
         )
         caps = await get_beer_caps_by_beer_id(db_session, beer_id)
         assert len(caps) == 2
@@ -93,7 +101,9 @@ class TestBeerCapCRUD:
         )
 
         new_date = date(2023, 1, 1)
-        update_data = BeerCapUpdateSchema(variant_name="New Variant", collected_date=new_date)
+        update_data = BeerCapUpdateSchema(
+            variant_name="New Variant", collected_date=new_date
+        )
         updated_cap = await update_beer_cap(db_session, created_cap.id, update_data)
 
         assert updated_cap is not None
@@ -124,7 +134,9 @@ class TestBeerCapCRUD:
             db_session,
             self.beer.id,
             "delete_test_cap.jpg",
-            BeerCapCreateSchema(filename="delete_test_cap.jpg", collected_date=date.today()),
+            BeerCapCreateSchema(
+                filename="delete_test_cap.jpg", collected_date=date.today()
+            ),
         )
         deleted = await delete_beer_cap(db_session, new_cap.id)
         assert deleted is True

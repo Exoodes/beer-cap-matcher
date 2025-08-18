@@ -16,33 +16,47 @@ from src.storage.minio.minio_client import MinioClientWrapper
 IMAGE_DIR = Path("data/images")
 
 
-async def seed_beer_caps(data: Dict[str, Dict[str, Dict[str, list[Dict[str, Any]]]]]) -> None:
+async def seed_beer_caps(
+    data: Dict[str, Dict[str, Dict[str, list[Dict[str, Any]]]]]
+) -> None:
     """Seed database and MinIO with initial beer cap data."""
     minio_wrapper = MinioClientWrapper()
     facade = BeerCapFacade(minio_wrapper)
 
-    minio_wrapper.ensure_buckets_exist([facade.original_caps_bucket, facade.augmented_caps_bucket])
+    minio_wrapper.ensure_buckets_exist(
+        [facade.original_caps_bucket, facade.augmented_caps_bucket]
+    )
 
     async with GLOBAL_ASYNC_SESSION_MAKER() as session:
         for country_name, brands in data.items():
-            country = await create_country(session, CountryCreateSchema(name=country_name))
+            country = await create_country(
+                session, CountryCreateSchema(name=country_name)
+            )
 
             for brand_name, beers in brands.items():
                 beer_brand = await create_beer_brand(session, brand_name)
 
                 for beer_name, caps in beers.items():
-                    beer = await create_beer(session, beer_name, beer_brand.id, country_id=country.id)
+                    beer = await create_beer(
+                        session, beer_name, beer_brand.id, country_id=country.id
+                    )
 
                     for cap in caps:
                         filename = cap["file_name"]
                         variant = cap.get("variant")
-                        cap_schema = BeerCapCreateSchema(filename=filename, variant_name=variant)
+                        cap_schema = BeerCapCreateSchema(
+                            filename=filename, variant_name=variant
+                        )
                         image_path = IMAGE_DIR / filename
 
                         with open(image_path, "rb") as image_file:
                             length = os.path.getsize(image_path)
                             await facade.create_cap_for_existing_beer_and_upload(
-                                beer.id, cap_schema, image_file, length, content_type="image/jpeg"
+                                beer.id,
+                                cap_schema,
+                                image_file,
+                                length,
+                                content_type="image/jpeg",
                             )
 
 

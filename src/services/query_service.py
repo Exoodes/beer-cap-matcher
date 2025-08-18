@@ -21,7 +21,9 @@ class QueryService:
     def __init__(
         self,
         minio_wrapper: MinioClientWrapper,
-        session_maker: Callable[[], Awaitable[AsyncSession]] = GLOBAL_ASYNC_SESSION_MAKER,
+        session_maker: Callable[
+            [], Awaitable[AsyncSession]
+        ] = GLOBAL_ASYNC_SESSION_MAKER,
     ) -> None:
         self.session_maker = session_maker
         self.minio_wrapper = minio_wrapper
@@ -40,7 +42,9 @@ class QueryService:
 
         if not self.minio_wrapper.object_exists(
             self.index_bucket, self.index_file_name
-        ) or not self.minio_wrapper.object_exists(self.index_bucket, self.metadata_file_name):
+        ) or not self.minio_wrapper.object_exists(
+            self.index_bucket, self.metadata_file_name
+        ):
             return
 
         index_bytes = await asyncio.to_thread(
@@ -84,7 +88,9 @@ class QueryService:
         faiss_k: int = 10000,
     ) -> Tuple[List[BeerCap], List[AggregatedResult]]:
         """Query the FAISS index with an image."""
-        results = self.querier.query(image_bytes=image_bytes, top_k=top_k, faiss_k=faiss_k)
+        results = self.querier.query(
+            image_bytes=image_bytes, top_k=top_k, faiss_k=faiss_k
+        )
         print(f"Queried {len(results)} results")
         caps = []
 

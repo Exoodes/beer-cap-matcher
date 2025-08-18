@@ -8,7 +8,10 @@ class AugmentedCapCreateSchema(BaseModel):
     """
 
     filename: str = Field(
-        ..., min_length=1, max_length=255, description="File name of the augmented image"
+        ...,
+        min_length=1,
+        max_length=255,
+        description="File name of the augmented image",
     )
 
     model_config = ConfigDict(from_attributes=True)

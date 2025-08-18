@@ -32,7 +32,10 @@ data = {
         },
         "Radegast": {
             "Radegast Ryze Hořká 12°": [{"file_name": "058.jpg"}],
-            "Radegast Rázná 10°": [{"file_name": "005.jpg"}, {"file_name": "026.jpg", "variant": "Klasické víčko"}],
+            "Radegast Rázná 10°": [
+                {"file_name": "005.jpg"},
+                {"file_name": "026.jpg", "variant": "Klasické víčko"},
+            ],
             "Radegast Hutná 15°": [{"file_name": "077.jpg"}],
             "Radegast Ratar": [{"file_name": "008.jpg"}],
         },

@@ -46,7 +46,9 @@ class TestBeerBrandCRUD:
     async def test_update_beer_brand(self, db_session: AsyncSession):
         created_brand = await create_beer_brand(db_session, "Brand to Update")
         update_data = BeerBrandUpdateSchema(name="Updated Brand Name")
-        updated_brand = await update_beer_brand(db_session, created_brand.id, update_data)
+        updated_brand = await update_beer_brand(
+            db_session, created_brand.id, update_data
+        )
         assert updated_brand.name == "Updated Brand Name"
 
     async def test_delete_beer_brand(self, db_session: AsyncSession):

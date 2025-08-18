@@ -19,7 +19,9 @@ class AugmentedCap(Base):
     s3_key = Column(String, nullable=False, unique=True)
     embedding_vector = Column(ARRAY(Float), nullable=True)
 
-    beer_cap_id = Column(Integer, ForeignKey("beer_caps.id", ondelete="CASCADE"), nullable=False)
+    beer_cap_id = Column(
+        Integer, ForeignKey("beer_caps.id", ondelete="CASCADE"), nullable=False
+    )
     beer_cap = relationship("BeerCap", back_populates="augmented_caps")
 
     def __repr__(self) -> str:

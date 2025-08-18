@@ -22,10 +22,14 @@ class Beer(Base):
     beer_brand = relationship("BeerBrand", back_populates="beers")
     caps = relationship("BeerCap", back_populates="beer")
 
-    __table_args__ = (CheckConstraint("rating >= 0 AND rating <= 10", name="rating_range"),)
+    __table_args__ = (
+        CheckConstraint("rating >= 0 AND rating <= 10", name="rating_range"),
+    )
 
     def __repr__(self) -> str:
-        return f"<Beer id={self.id} name='{self.name}' beer_brand_id={self.beer_brand_id}>"
+        return (
+            f"<Beer id={self.id} name='{self.name}' beer_brand_id={self.beer_brand_id}>"
+        )
 
     def __str__(self) -> str:
         return f"Beer: {self.name} (ID: {self.id})"

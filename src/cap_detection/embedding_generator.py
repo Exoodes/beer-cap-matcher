@@ -1,5 +1,4 @@
 import io
-from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
 import numpy as np
@@ -22,7 +21,9 @@ class EmbeddingGenerator:
         self.model.eval()
         self.image_size = image_size
 
-    def generate_embeddings_from_bytes(self, images: Iterable[Tuple[str, bytes]]) -> Dict[str, List]:
+    def generate_embeddings_from_bytes(
+        self, images: Iterable[Tuple[str, bytes]]
+    ) -> Dict[str, List]:
         """Generate embeddings directly from image bytes."""
         result = {}
 

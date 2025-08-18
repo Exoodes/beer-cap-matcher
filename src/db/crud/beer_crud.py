@@ -16,7 +16,9 @@ async def create_beer(
     country_id: Optional[int] = None,
     commit: bool = True,
 ) -> Beer:
-    beer = Beer(name=name, rating=rating, beer_brand_id=beer_brand_id, country_id=country_id)
+    beer = Beer(
+        name=name, rating=rating, beer_brand_id=beer_brand_id, country_id=country_id
+    )
     session.add(beer)
 
     if commit:

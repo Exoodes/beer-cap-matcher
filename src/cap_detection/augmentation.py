@@ -15,7 +15,9 @@ def get_augmentation_pipeline(image_size: Tuple[int, int] = (224, 224)) -> A.Com
                 p=1.0,
                 keep_ratio=True,
             ),
-            A.RandomBrightnessContrast(brightness_limit=(-0.3, 0.3), contrast_limit=(-0.3, 0.3), p=0.5),
+            A.RandomBrightnessContrast(
+                brightness_limit=(-0.3, 0.3), contrast_limit=(-0.3, 0.3), p=0.5
+            ),
             A.OneOf(
                 [
                     A.MotionBlur(p=0.2),

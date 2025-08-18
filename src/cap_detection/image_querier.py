@@ -57,7 +57,13 @@ class ImageQuerier:
         results = self._query_embedding(image_tensor, faiss_k)
         full_results = self._aggregate_results(results)
 
-        top_k_items = dict(sorted(full_results.items(), key=lambda item: item[1].mean_distance, reverse=True)[:top_k])
+        top_k_items = dict(
+            sorted(
+                full_results.items(),
+                key=lambda item: item[1].mean_distance,
+                reverse=True,
+            )[:top_k]
+        )
 
         return top_k_items
 
@@ -65,7 +71,9 @@ class ImageQuerier:
         """
         Processes an image from bytes using the new shared utility function.
         """
-        processed_image = _process_image_for_embedding(data, self.background_remover, self.image_size)
+        processed_image = _process_image_for_embedding(
+            data, self.background_remover, self.image_size
+        )
 
         image_array = np.array(processed_image)
         rgb = image_array[..., :3] if image_array.shape[-1] == 4 else image_array
@@ -74,18 +82,27 @@ class ImageQuerier:
         image_tensor = self.preprocess(image_pil).unsqueeze(0).to(self.device)
         return image_tensor
 
-    def _query_embedding(self, image_tensor: torch.Tensor, top_k: int) -> List[Tuple[int, float]]:
+    def _query_embedding(
+        self, image_tensor: torch.Tensor, top_k: int
+    ) -> List[Tuple[int, float]]:
         top_k = min(top_k, self.index.ntotal)
         with torch.no_grad():
             embedding = self.model.encode_image(image_tensor).cpu().numpy()
             faiss.normalize_L2(embedding)
 
         distances, indices = self.index.search(embedding, top_k)
-        results = [(self.metadata[idx], float(dist)) for idx, dist in zip(indices[0], distances[0])]
+        results = [
+            (self.metadata[idx], float(dist))
+            for idx, dist in zip(indices[0], distances[0])
+        ]
         return results
 
-    def _aggregate_results(self, results: List[Tuple[int, float]]) -> Dict[int, AggregatedResult]:
-        aggregation: Dict[int, Dict[int, List[float]]] = defaultdict(lambda: {"count": 0, "distances": []})
+    def _aggregate_results(
+        self, results: List[Tuple[int, float]]
+    ) -> Dict[int, AggregatedResult]:
+        aggregation: Dict[int, Dict[int, List[float]]] = defaultdict(
+            lambda: {"count": 0, "distances": []}
+        )
 
         for matched_augmented_cap_id, distance in results:
             cap_id = self.augmented_cap_to_cap.get(matched_augmented_cap_id)

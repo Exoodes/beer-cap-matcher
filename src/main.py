@@ -81,7 +81,9 @@ class BeerCapMatcherApp:
         logger.info(f"Running query for image: {image_path}")
 
         if self.index_loader is None:
-            self.index_loader = IndexLoader(self.faiss_index_path, self.faiss_metadata_path)
+            self.index_loader = IndexLoader(
+                self.faiss_index_path, self.faiss_metadata_path
+            )
             self.index_loader.load()
 
         if self.querier is None:
@@ -92,7 +94,9 @@ class BeerCapMatcherApp:
                 augmentation_map_path=self.augmentation_map_path,
             )
 
-        results: List[AggregatedResult] = self.querier.query(image_path=image_path, top_k=top_k)
+        results: List[AggregatedResult] = self.querier.query(
+            image_path=image_path, top_k=top_k
+        )
         self._print_results(results)
         return results
 
@@ -111,7 +115,9 @@ class BeerCapMatcherApp:
             if cmd in ["exit", "quit"]:
                 break
             elif cmd == "help":
-                print("Commands: augment, generate_embeddings, index, query <image_path>, exit")
+                print(
+                    "Commands: augment, generate_embeddings, index, query <image_path>, exit"
+                )
             elif cmd == "augment":
                 self.run_augmentation()
             elif cmd == "generate_embeddings":
@@ -127,12 +133,24 @@ class BeerCapMatcherApp:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Beer cap matcher CLI.")
-    parser.add_argument("--download-bg-model", action="store_true", help="Download the U²-Net background removal model")
-    parser.add_argument("--augment", action="store_true", help="Generate augmented images")
-    parser.add_argument("--generate-embeddings", action="store_true", help="Generate image embeddings")
+    parser.add_argument(
+        "--download-bg-model",
+        action="store_true",
+        help="Download the U²-Net background removal model",
+    )
+    parser.add_argument(
+        "--augment", action="store_true", help="Generate augmented images"
+    )
+    parser.add_argument(
+        "--generate-embeddings", action="store_true", help="Generate image embeddings"
+    )
     parser.add_argument("--index", action="store_true", help="Build the FAISS index")
-    parser.add_argument("--query", type=str, help="Path to image for querying the index")
-    parser.add_argument("--repl", action="store_true", help="Run in interactive REPL mode")
+    parser.add_argument(
+        "--query", type=str, help="Path to image for querying the index"
+    )
+    parser.add_argument(
+        "--repl", action="store_true", help="Run in interactive REPL mode"
+    )
     args = parser.parse_args()
 
     initialize_all = not args.download_bg_model

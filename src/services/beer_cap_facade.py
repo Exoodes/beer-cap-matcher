@@ -2,15 +2,29 @@ from typing import Awaitable, BinaryIO, Callable, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.schemas.augmented_beer_cap.augmented_cap_create import AugmentedCapCreateSchema
+from src.api.schemas.augmented_beer_cap.augmented_cap_create import (
+    AugmentedCapCreateSchema,
+)
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.api.schemas.country.country_create import CountryCreateSchema
 from src.config.settings import settings
-from src.db.crud.augmented_cap_crud import create_augmented_cap, delete_augmented_cap, get_all_augmented_caps
-from src.db.crud.beer_brand_crud import create_beer_brand, get_beer_brand_by_id, get_beer_brand_by_name
+from src.db.crud.augmented_cap_crud import (
+    create_augmented_cap,
+    delete_augmented_cap,
+    get_all_augmented_caps,
+)
+from src.db.crud.beer_brand_crud import (
+    create_beer_brand,
+    get_beer_brand_by_id,
+    get_beer_brand_by_name,
+)
 from src.db.crud.beer_cap_crud import create_beer_cap, get_beer_cap_by_id
 from src.db.crud.beer_crud import create_beer, get_beer_by_id
-from src.db.crud.country_crud import create_country, get_country_by_id, get_country_by_name
+from src.db.crud.country_crud import (
+    create_country,
+    get_country_by_id,
+    get_country_by_name,
+)
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
 from src.db.entities.augmented_cap_entity import AugmentedCap
 from src.db.entities.beer_brand_entity import BeerBrand
@@ -23,7 +37,9 @@ class BeerCapFacade:
     def __init__(
         self,
         minio_wrapper: MinioClientWrapper,
-        session_maker: Callable[[], Awaitable[AsyncSession]] = GLOBAL_ASYNC_SESSION_MAKER,
+        session_maker: Callable[
+            [], Awaitable[AsyncSession]
+        ] = GLOBAL_ASYNC_SESSION_MAKER,
     ):
         self.minio_wrapper = minio_wrapper
         self.session_maker = session_maker
@@ -32,10 +48,15 @@ class BeerCapFacade:
         self.augmented_caps_bucket = settings.minio_augmented_caps_bucket
 
         if not self.original_caps_bucket or not self.augmented_caps_bucket:
-            raise ValueError("MINIO_ORIGINAL_CAPS_BUCKET and MINIO_AUGMENTED_CAPS_BUCKET must be set in .env")
+            raise ValueError(
+                "MINIO_ORIGINAL_CAPS_BUCKET and MINIO_AUGMENTED_CAPS_BUCKET must be set in .env"
+            )
 
     async def get_or_create_beer_brand(
-        self, session: AsyncSession, beer_brand_id: Optional[int], beer_brand_name: Optional[str]
+        self,
+        session: AsyncSession,
+        beer_brand_id: Optional[int],
+        beer_brand_name: Optional[str],
     ) -> BeerBrand:
         if beer_brand_id:
             beer_brand = await get_beer_brand_by_id(session, beer_brand_id)
@@ -44,13 +65,18 @@ class BeerCapFacade:
         elif beer_brand_name:
             beer_brand = await get_beer_brand_by_name(session, beer_brand_name)
             if not beer_brand:
-                beer_brand = await create_beer_brand(session, beer_brand_name, commit=False)
+                beer_brand = await create_beer_brand(
+                    session, beer_brand_name, commit=False
+                )
         else:
             raise ValueError("Beer brand ID or name is required.")
         return beer_brand
 
     async def get_or_create_country(
-        self, session: AsyncSession, country_id: Optional[int], country_name: Optional[str]
+        self,
+        session: AsyncSession,
+        country_id: Optional[int],
+        country_name: Optional[str],
     ) -> Optional[Country]:
         if country_id:
             country = await get_country_by_id(session, country_id)
@@ -61,7 +87,9 @@ class BeerCapFacade:
             country = await get_country_by_name(session, country_name)
             if not country:
                 country = await create_country(
-                    session, CountryCreateSchema(name=country_name, description=""), commit=False
+                    session,
+                    CountryCreateSchema(name=country_name, description=""),
+                    commit=False,
                 )
             return country
         return None
@@ -83,7 +111,9 @@ class BeerCapFacade:
                 beer_brand = await self.get_or_create_beer_brand(
                     session, cap_metadata.beer_brand_id, cap_metadata.beer_brand_name
                 )
-                country = await self.get_or_create_country(session, cap_metadata.country_id, cap_metadata.country_name)
+                country = await self.get_or_create_country(
+                    session, cap_metadata.country_id, cap_metadata.country_name
+                )
 
                 beer = await create_beer(
                     session,
@@ -97,9 +127,15 @@ class BeerCapFacade:
 
             object_name = cap_metadata.filename
             self.minio_wrapper.upload_file(
-                self.original_caps_bucket, object_name, image_data, image_length, content_type
+                self.original_caps_bucket,
+                object_name,
+                image_data,
+                image_length,
+                content_type,
             )
-            beer_cap = await create_beer_cap(session, beer.id, object_name, cap_metadata)
+            beer_cap = await create_beer_cap(
+                session, beer.id, object_name, cap_metadata
+            )
 
             await session.commit()
 
@@ -120,10 +156,16 @@ class BeerCapFacade:
 
             object_name = cap_metadata.filename
             self.minio_wrapper.upload_file(
-                self.original_caps_bucket, object_name, image_data, image_length, content_type
+                self.original_caps_bucket,
+                object_name,
+                image_data,
+                image_length,
+                content_type,
             )
 
-            beer_cap = await create_beer_cap(session, beer.id, object_name, cap_metadata)
+            beer_cap = await create_beer_cap(
+                session, beer.id, object_name, cap_metadata
+            )
             beer_cap = await get_beer_cap_by_id(session, beer_cap.id, load_beer=True)
             return beer_cap
 
@@ -142,15 +184,25 @@ class BeerCapFacade:
 
             object_name = cap_metadata.filename
             self.minio_wrapper.upload_file(
-                self.original_caps_bucket, object_name, image_data, image_length, content_type
+                self.original_caps_bucket,
+                object_name,
+                image_data,
+                image_length,
+                content_type,
             )
 
-            beer_cap = await create_beer_cap(session, beer.id, object_name, cap_metadata)
+            beer_cap = await create_beer_cap(
+                session, beer.id, object_name, cap_metadata
+            )
             beer_cap = await get_beer_cap_by_id(session, beer_cap.id, load_beer=True)
             return beer_cap
 
-    async def _delete_augmented_caps_helper(self, session: AsyncSession, beer_cap_id: int) -> Optional[BeerCap]:
-        beer_cap = await get_beer_cap_by_id(session, beer_cap_id, load_augmented_caps=True)
+    async def _delete_augmented_caps_helper(
+        self, session: AsyncSession, beer_cap_id: int
+    ) -> Optional[BeerCap]:
+        beer_cap = await get_beer_cap_by_id(
+            session, beer_cap_id, load_augmented_caps=True
+        )
         if not beer_cap:
             return None
 
@@ -163,12 +215,16 @@ class BeerCapFacade:
 
     async def delete_beer_cap_and_its_augmented_caps(self, beer_cap_id: int) -> bool:
         async with self.session_maker() as session:
-            beer_cap = await get_beer_cap_by_id(session, beer_cap_id, load_augmented_caps=True)
+            beer_cap = await get_beer_cap_by_id(
+                session, beer_cap_id, load_augmented_caps=True
+            )
             if not beer_cap:
                 return False
 
             for aug_cap in beer_cap.augmented_caps:
-                self.minio_wrapper.delete_file(self.augmented_caps_bucket, aug_cap.s3_key)
+                self.minio_wrapper.delete_file(
+                    self.augmented_caps_bucket, aug_cap.s3_key
+                )
 
             self.minio_wrapper.delete_file(self.original_caps_bucket, beer_cap.s3_key)
 
@@ -225,15 +281,23 @@ class BeerCapFacade:
 
             object_name = aug_metadata.filename
             self.minio_wrapper.upload_file(
-                self.augmented_caps_bucket, object_name, image_data, image_length, content_type
+                self.augmented_caps_bucket,
+                object_name,
+                image_data,
+                image_length,
+                content_type,
             )
 
             aug_cap = await create_augmented_cap(session, beer_cap_id, object_name)
 
             return aug_cap
 
-    def get_presigned_url_for_cap(self, filename: str, is_augmented: bool = False) -> str:
+    def get_presigned_url_for_cap(
+        self, filename: str, is_augmented: bool = False
+    ) -> str:
         object_name = filename
-        bucket_name = self.augmented_caps_bucket if is_augmented else self.original_caps_bucket
+        bucket_name = (
+            self.augmented_caps_bucket if is_augmented else self.original_caps_bucket
+        )
 
         return self.minio_wrapper.generate_presigned_url(bucket_name, object_name)

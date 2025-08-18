@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-from typing import Any, Generator
 
 import uvicorn
 from fastapi import FastAPI
@@ -78,6 +77,7 @@ app.router.redirect_slashes = True
 async def health() -> dict[str, str]:
     """Health check endpoint."""
     return {"status": "ok"}
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

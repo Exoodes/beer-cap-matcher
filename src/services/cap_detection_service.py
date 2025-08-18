@@ -25,7 +25,9 @@ class CapDetectionService:
     def __init__(
         self,
         minio_wrapper: MinioClientWrapper,
-        session_maker: Callable[[], Awaitable[AsyncSession]] = GLOBAL_ASYNC_SESSION_MAKER,
+        session_maker: Callable[
+            [], Awaitable[AsyncSession]
+        ] = GLOBAL_ASYNC_SESSION_MAKER,
         u2net_model_path: str | None = None,
     ) -> None:
         self.minio_wrapper = minio_wrapper
@@ -47,23 +49,34 @@ class CapDetectionService:
         async with self.session_maker() as session:
             beer_caps = await get_all_beer_caps(session)
             augmenter = ImageAugmenter(
-                u2net_model_path=self.u2net_model_path, augmentations_per_image=augmentations_per_image
+                u2net_model_path=self.u2net_model_path,
+                augmentations_per_image=augmentations_per_image,
             )
 
             def process_cap(cap):
-                original_bytes = self.minio_wrapper.download_bytes(self.original_caps_bucket, cap.s3_key)
+                original_bytes = self.minio_wrapper.download_bytes(
+                    self.original_caps_bucket, cap.s3_key
+                )
                 augmented_images = augmenter.augment_image_bytes(original_bytes)
                 return cap, augmented_images
 
             loop = asyncio.get_running_loop()
             with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-                results = await asyncio.gather(*[loop.run_in_executor(executor, process_cap, cap) for cap in beer_caps])
+                results = await asyncio.gather(
+                    *[
+                        loop.run_in_executor(executor, process_cap, cap)
+                        for cap in beer_caps
+                    ]
+                )
 
             for cap, augmented_images in results:
                 for idx, aug_bytes in enumerate(augmented_images):
                     object_name = f"{Path(cap.s3_key).stem}_aug_{idx:03d}.png"
                     self.minio_wrapper.upload_file(
-                        self.augmented_caps_bucket, object_name, io.BytesIO(aug_bytes), len(aug_bytes)
+                        self.augmented_caps_bucket,
+                        object_name,
+                        io.BytesIO(aug_bytes),
+                        len(aug_bytes),
                     )
                     await create_augmented_cap(session, cap.id, object_name)
                     created += 1
@@ -105,7 +118,9 @@ class CapDetectionService:
                     embeddings.append(aug_cap.embedding_vector)
                     metadata.append(aug_cap.id)
 
-            index, metadata_blob = await asyncio.to_thread(self.index_builder.build_index, embeddings, metadata)
+            index, metadata_blob = await asyncio.to_thread(
+                self.index_builder.build_index, embeddings, metadata
+            )
 
             with tempfile.NamedTemporaryFile(suffix=".index") as tmp:
                 faiss.write_index(index, tmp.name)

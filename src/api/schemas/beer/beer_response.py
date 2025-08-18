@@ -12,6 +12,5 @@ class BeerResponseWithCaps(BeerResponseBase):
     """
 
     caps: Optional[List[BeerCapResponseBase]] = Field(
-        default=None,
-        description="List of caps associated with this beer"
+        default=None, description="List of caps associated with this beer"
     )

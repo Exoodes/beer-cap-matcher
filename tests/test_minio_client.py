@@ -1,16 +1,21 @@
 import io
-from unittest.mock import MagicMock
 
 import pytest
 from minio.error import S3Error
 
 from src.storage.minio.minio_client import MinioClientWrapper
-from tests.conftest import TEST_BUCKET_NAME, TEST_IMAGE_CONTENT_TYPE, TEST_MINIO_ENDPOINT
+from tests.conftest import (
+    TEST_BUCKET_NAME,
+    TEST_IMAGE_CONTENT_TYPE,
+    TEST_MINIO_ENDPOINT,
+)
 
 
 class TestMinioClientIntegration:
 
-    def test_upload_file(self, real_minio_client: MinioClientWrapper, dummy_image_bytes: bytes):
+    def test_upload_file(
+        self, real_minio_client: MinioClientWrapper, dummy_image_bytes: bytes
+    ):
         object_name = "test_upload.jpg"
         data_stream = io.BytesIO(dummy_image_bytes)
 
@@ -28,7 +33,9 @@ class TestMinioClientIntegration:
         assert stat.size == len(dummy_image_bytes)
         print(f"✅ Uploaded and verified: {object_name} (size: {stat.size})")
 
-    def test_download_bytes(self, real_minio_client: MinioClientWrapper, dummy_image_bytes: bytes):
+    def test_download_bytes(
+        self, real_minio_client: MinioClientWrapper, dummy_image_bytes: bytes
+    ):
         object_name = "test_download.jpg"
 
         upload_stream = io.BytesIO(dummy_image_bytes)
@@ -40,12 +47,16 @@ class TestMinioClientIntegration:
             content_type=TEST_IMAGE_CONTENT_TYPE,
         )
 
-        downloaded_data = real_minio_client.download_bytes(TEST_BUCKET_NAME, object_name)
+        downloaded_data = real_minio_client.download_bytes(
+            TEST_BUCKET_NAME, object_name
+        )
 
         assert downloaded_data == dummy_image_bytes
         print(f"✅ Downloaded and verified content for: {object_name}")
 
-    def test_delete_file(self, real_minio_client: MinioClientWrapper, dummy_image_bytes: bytes):
+    def test_delete_file(
+        self, real_minio_client: MinioClientWrapper, dummy_image_bytes: bytes
+    ):
         object_name = "test_delete.jpg"
 
         upload_stream = io.BytesIO(dummy_image_bytes)
@@ -63,19 +74,27 @@ class TestMinioClientIntegration:
 
         with pytest.raises(S3Error) as excinfo:
             real_minio_client.client.stat_object(TEST_BUCKET_NAME, object_name)
-        assert "NoSuchKey" in str(excinfo.value) or "Object not found" in str(excinfo.value)
+        assert "NoSuchKey" in str(excinfo.value) or "Object not found" in str(
+            excinfo.value
+        )
         print(f"✅ Deleted and verified absence of: {object_name}")
 
     def test_generate_presigned_url(self, real_minio_client: MinioClientWrapper):
         object_name = "test_presigned_url.jpg"
 
-        presigned_url = real_minio_client.generate_presigned_url(TEST_BUCKET_NAME, object_name, expiry_seconds=60)
+        presigned_url = real_minio_client.generate_presigned_url(
+            TEST_BUCKET_NAME, object_name, expiry_seconds=60
+        )
 
         assert isinstance(presigned_url, str)
-        assert presigned_url.startswith(f"http://{TEST_MINIO_ENDPOINT}/{TEST_BUCKET_NAME}/{object_name}")
+        assert presigned_url.startswith(
+            f"http://{TEST_MINIO_ENDPOINT}/{TEST_BUCKET_NAME}/{object_name}"
+        )
         print(f"✅ Generated presigned URL for: {object_name}")
 
-    def test_object_exists_existing(self, real_minio_client: MinioClientWrapper, dummy_image_bytes: bytes):
+    def test_object_exists_existing(
+        self, real_minio_client: MinioClientWrapper, dummy_image_bytes: bytes
+    ):
         object_name = "test_exists.jpg"
         upload_stream = io.BytesIO(dummy_image_bytes)
         real_minio_client.upload_file(
@@ -91,7 +110,9 @@ class TestMinioClientIntegration:
         object_name = "non_existent_file.jpg"
         assert real_minio_client.object_exists(TEST_BUCKET_NAME, object_name) is False
 
-    def test_ensure_buckets_exist_creates_new_bucket(self, real_minio_client: MinioClientWrapper):
+    def test_ensure_buckets_exist_creates_new_bucket(
+        self, real_minio_client: MinioClientWrapper
+    ):
         bucket_name = "new-test-bucket"
         if real_minio_client.client.bucket_exists(bucket_name):
             real_minio_client.client.remove_bucket(bucket_name)
@@ -100,8 +121,14 @@ class TestMinioClientIntegration:
         assert real_minio_client.client.bucket_exists(bucket_name) is True
         real_minio_client.client.remove_bucket(bucket_name)
 
-    def test_download_all_objects_parallel(self, real_minio_client: MinioClientWrapper, dummy_image_bytes: bytes):
-        object_names = ["test_parallel_1.jpg", "test_parallel_2.jpg", "test_parallel_3.jpg"]
+    def test_download_all_objects_parallel(
+        self, real_minio_client: MinioClientWrapper, dummy_image_bytes: bytes
+    ):
+        object_names = [
+            "test_parallel_1.jpg",
+            "test_parallel_2.jpg",
+            "test_parallel_3.jpg",
+        ]
         for name in object_names:
             real_minio_client.upload_file(
                 bucket_name=TEST_BUCKET_NAME,
@@ -111,7 +138,9 @@ class TestMinioClientIntegration:
                 content_type=TEST_IMAGE_CONTENT_TYPE,
             )
 
-        downloaded_objects = real_minio_client.download_all_objects_parallel(TEST_BUCKET_NAME)
+        downloaded_objects = real_minio_client.download_all_objects_parallel(
+            TEST_BUCKET_NAME
+        )
         downloaded_names = [name for name, _ in downloaded_objects]
 
         assert len(downloaded_objects) == len(object_names)
