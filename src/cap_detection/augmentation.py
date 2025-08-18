@@ -1,6 +1,6 @@
 from typing import Tuple
 
-import albumentations as A
+import albumentations as A  # type: ignore[import-untyped]
 from PIL import Image, ImageChops
 
 

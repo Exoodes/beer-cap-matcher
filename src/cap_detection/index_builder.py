@@ -1,7 +1,7 @@
 import pickle
 from typing import List
 
-import faiss
+import faiss  # type: ignore[import-untyped]
 import numpy as np
 
 from src.utils.logger import get_logger

@@ -37,9 +37,7 @@ class BeerCapFacade:
     def __init__(
         self,
         minio_wrapper: MinioClientWrapper,
-        session_maker: Callable[
-            [], Awaitable[AsyncSession]
-        ] = GLOBAL_ASYNC_SESSION_MAKER,
+        session_maker: Callable[[], AsyncSession] = GLOBAL_ASYNC_SESSION_MAKER,
     ):
         self.minio_wrapper = minio_wrapper
         self.session_maker = session_maker
@@ -101,12 +99,12 @@ class BeerCapFacade:
         image_length: int,
         content_type: str = "image/png",
     ) -> Optional[BeerCap]:
-        async with self.session_maker() as session:
+        session = self.session_maker()
+        async with session:
             if cap_metadata.beer_id:
                 beer = await get_beer_by_id(session, cap_metadata.beer_id)
                 if not beer:
                     return None
-
             elif cap_metadata.beer_name:
                 beer_brand = await self.get_or_create_beer_brand(
                     session, cap_metadata.beer_brand_id, cap_metadata.beer_brand_name
@@ -114,7 +112,6 @@ class BeerCapFacade:
                 country = await self.get_or_create_country(
                     session, cap_metadata.country_id, cap_metadata.country_name
                 )
-
                 beer = await create_beer(
                     session,
                     name=cap_metadata.beer_name,
@@ -133,14 +130,16 @@ class BeerCapFacade:
                 image_length,
                 content_type,
             )
-            beer_cap = await create_beer_cap(
+            created_cap = await create_beer_cap(
                 session, beer.id, object_name, cap_metadata
             )
 
             await session.commit()
 
-            beer_cap = await get_beer_cap_by_id(session, beer_cap.id, load_beer=True)
-            return beer_cap
+            fetched_cap = await get_beer_cap_by_id(
+                session, created_cap.id, load_beer=True
+            )
+            return fetched_cap
 
     async def create_beer_with_cap_and_upload(
         self,
@@ -151,7 +150,8 @@ class BeerCapFacade:
         image_length: int,
         content_type: str = "image/png",
     ) -> BeerCap:
-        async with self.session_maker() as session:
+        session = self.session_maker()
+        async with session:
             beer = await create_beer(session, beer_name, beer_brand_id, commit=False)
 
             object_name = cap_metadata.filename
@@ -163,11 +163,15 @@ class BeerCapFacade:
                 content_type,
             )
 
-            beer_cap = await create_beer_cap(
+            created_cap = await create_beer_cap(
                 session, beer.id, object_name, cap_metadata
             )
-            beer_cap = await get_beer_cap_by_id(session, beer_cap.id, load_beer=True)
-            return beer_cap
+            fetched_cap = await get_beer_cap_by_id(
+                session, created_cap.id, load_beer=True
+            )
+            if fetched_cap is None:
+                raise RuntimeError("Failed to fetch created BeerCap.")
+            return fetched_cap
 
     async def create_cap_for_existing_beer_and_upload(
         self,
@@ -177,7 +181,8 @@ class BeerCapFacade:
         image_length: int,
         content_type: str = "image/png",
     ) -> Optional[BeerCap]:
-        async with self.session_maker() as session:
+        session = self.session_maker()
+        async with session:
             beer = await get_beer_by_id(session, beer_id)
             if not beer:
                 return None
@@ -191,11 +196,13 @@ class BeerCapFacade:
                 content_type,
             )
 
-            beer_cap = await create_beer_cap(
+            created_cap = await create_beer_cap(
                 session, beer.id, object_name, cap_metadata
             )
-            beer_cap = await get_beer_cap_by_id(session, beer_cap.id, load_beer=True)
-            return beer_cap
+            fetched_cap = await get_beer_cap_by_id(
+                session, created_cap.id, load_beer=True
+            )
+            return fetched_cap
 
     async def _delete_augmented_caps_helper(
         self, session: AsyncSession, beer_cap_id: int
@@ -214,7 +221,8 @@ class BeerCapFacade:
         return beer_cap
 
     async def delete_beer_cap_and_its_augmented_caps(self, beer_cap_id: int) -> bool:
-        async with self.session_maker() as session:
+        session = self.session_maker()
+        async with session:
             beer_cap = await get_beer_cap_by_id(
                 session, beer_cap_id, load_augmented_caps=True
             )
@@ -233,7 +241,8 @@ class BeerCapFacade:
             return True
 
     async def delete_augmented_caps(self, beer_cap_id: int) -> bool:
-        async with self.session_maker() as session:
+        session = self.session_maker()
+        async with session:
             result = await self._delete_augmented_caps_helper(session, beer_cap_id)
             await session.commit()
 
@@ -241,7 +250,8 @@ class BeerCapFacade:
 
     async def delete_all_augmented_caps(self) -> int:
         deleted_count = 0
-        async with self.session_maker() as session:
+        session = self.session_maker()
+        async with session:
             augmented_caps = await get_all_augmented_caps(session)
             for aug in augmented_caps:
                 self.minio_wrapper.delete_file(self.augmented_caps_bucket, aug.s3_key)
@@ -252,7 +262,8 @@ class BeerCapFacade:
         return deleted_count
 
     async def delete_beer_and_caps(self, beer_id: int) -> bool:
-        async with self.session_maker() as session:
+        session = self.session_maker()
+        async with session:
             beer = await get_beer_by_id(session, beer_id, load_caps=True)
             if not beer:
                 return False
@@ -274,7 +285,8 @@ class BeerCapFacade:
         image_length: int,
         content_type: str = "image/png",
     ) -> Optional[AugmentedCap]:
-        async with self.session_maker() as session:
+        session = self.session_maker()
+        async with session:
             beer_cap = await get_beer_cap_by_id(session, beer_cap_id)
             if not beer_cap:
                 return None

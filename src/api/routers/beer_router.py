@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,14 +39,13 @@ router = APIRouter(prefix="/beers", tags=["Beers"])
 )
 async def create_beer_endpoint(
     beer_data: BeerCreateSchema,
-    db: AsyncSession = Depends(get_db_session),
+    db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> BeerResponseWithCaps:
-    """Create a new beer."""
     new_beer = await create_beer(
         session=db,
         name=beer_data.name,
         beer_brand_id=beer_data.beer_brand_id,
-        rating=beer_data.rating,
+        rating=beer_data.rating if beer_data.rating is not None else 0,
         country_id=beer_data.country_id,
     )
 
@@ -65,11 +64,10 @@ async def create_beer_endpoint(
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def get_all_beers_endpoint(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
     include_caps: bool = Query(False, description="Include caps for each beer"),
     include_country: bool = Query(False, description="Include country for each beer"),
-    db: AsyncSession = Depends(get_db_session),
 ) -> List[BeerResponseWithCaps]:
-    """Get all beers, optionally including their caps and country."""
     beers = await get_all_beers(
         db, load_caps=include_caps, load_country=include_country
     )
@@ -112,11 +110,10 @@ async def get_all_beers_endpoint(
 )
 async def get_beer_by_id_endpoint(
     beer_id: int,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
     include_caps: bool = Query(False, description="Include caps for the beer"),
     include_country: bool = Query(False, description="Include country for the beer"),
-    db: AsyncSession = Depends(get_db_session),
 ) -> BeerResponseWithCaps:
-    """Get a specific beer by its ID, optionally including its caps and country."""
     beer = await get_beer_by_id(
         db, beer_id, load_caps=include_caps, load_country=include_country
     )
@@ -158,11 +155,8 @@ async def get_beer_by_id_endpoint(
 )
 async def delete_beer(
     beer_id: int,
-    beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
+    beer_cap_facade: Annotated[BeerCapFacade, Depends(get_beer_cap_facade)],
 ) -> StatusResponse:
-    """
-    Delete a beer by its ID.
-    """
     deleted = await beer_cap_facade.delete_beer_and_caps(beer_id)
 
     if not deleted:
@@ -183,21 +177,18 @@ async def delete_beer(
     },
 )
 async def update_beer_endpoint(
-    beer_id: int,
+    beer_cap_id: int,
     update_data: BeerUpdateSchema,
-    db: AsyncSession = Depends(get_db_session),
+    db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> BeerResponseWithCaps:
-    """
-    Update beer details.
-    """
     updated_beer = await update_beer(
-        db, beer_id, update_data, load_caps=True, load_country=True
+        db, beer_cap_id, update_data, load_caps=True, load_country=True
     )
 
     if not updated_beer:
         raise HTTPException(status_code=404, detail="Beer not found.")
 
-    logger.info("Updated beer %s with data: %s", beer_id, update_data.dict())
+    logger.info("Updated beer %s with data: %s", beer_cap_id, update_data.dict())
 
     caps = [
         BeerCapResponseBase(

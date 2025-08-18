@@ -1,7 +1,16 @@
-from sqlalchemy import CheckConstraint, Column, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional
+
+from sqlalchemy import CheckConstraint, ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.entities import Base
+
+if TYPE_CHECKING:
+    from .beer_brand_entity import BeerBrand
+    from .beer_cap_entity import BeerCap
+    from .country_entity import Country
 
 
 class Beer(Base):
@@ -12,15 +21,20 @@ class Beer(Base):
 
     __tablename__ = "beers"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
-    rating = Column(Integer, nullable=False, default=0)
-    country_id = Column(Integer, ForeignKey("countries.id"), nullable=True)
-    beer_brand_id = Column(Integer, ForeignKey("beer_brands.id"), nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    rating: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    country = relationship("Country", back_populates="beers")
-    beer_brand = relationship("BeerBrand", back_populates="beers")
-    caps = relationship("BeerCap", back_populates="beer")
+    country_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("countries.id"), nullable=True
+    )
+    beer_brand_id: Mapped[int] = mapped_column(
+        ForeignKey("beer_brands.id"), nullable=False
+    )
+
+    country: Mapped[Optional["Country"]] = relationship(back_populates="beers")
+    beer_brand: Mapped["BeerBrand"] = relationship(back_populates="beers")
+    caps: Mapped[list["BeerCap"]] = relationship(back_populates="beer")
 
     __table_args__ = (
         CheckConstraint("rating >= 0 AND rating <= 10", name="rating_range"),

@@ -1,10 +1,10 @@
-# pyright: reportUnknownVariableType=false
+from typing import Tuple
 
-import clip
+import clip  # type: ignore[import-untyped]
 import torch
 from torch import nn
-from torchvision.transforms import Compose
-from typing import Tuple
+from torchvision.transforms import Compose  # type: ignore[import-untyped]
+
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)

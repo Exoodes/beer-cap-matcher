@@ -20,23 +20,20 @@ class LogRequestMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         start_time = time.time()
-        client = request.client.host
+        client_host = request.client.host if request.client else "unknown"
         content_type = request.headers.get("content-type", "")
         query_params = dict(request.query_params)
 
-        # Just identify body type — don't consume it
         body_info = "<not logged>"
         if content_type.startswith("application/json"):
             try:
                 body_bytes = await request.body()
-                request._body = body_bytes  # Patch back
+                request._body = body_bytes
                 body_info = body_bytes.decode("utf-8")
             except Exception:
                 body_info = "<unreadable JSON body>"
-
         elif content_type.startswith("multipart/form-data"):
             body_info = "<multipart/form-data - skipped>"
-
         else:
             body_info = f"<content-type: {content_type}>"
 
@@ -44,7 +41,7 @@ class LogRequestMiddleware(BaseHTTPMiddleware):
         duration = time.time() - start_time
 
         logger.info(
-            f"{request.method} {request.url.path} from {client} "
+            f"{request.method} {request.url.path} from {client_host} "
             f"query={query_params} body={body_info} "
             f"status={response.status_code} duration={duration:.3f}s"
         )

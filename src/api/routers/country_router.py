@@ -64,7 +64,10 @@ async def get_all_countries_endpoint(
             name=country.name,
             description=country.description,
             beers=(
-                [BeerResponseBase(id=beer.id, name=beer.name) for beer in country.beers]
+                [
+                    BeerResponseBase(id=beer.id, name=beer.name, rating=beer.rating)
+                    for beer in country.beers
+                ]
                 if include_beers
                 else None
             ),
@@ -88,7 +91,10 @@ async def get_country_by_id_endpoint(
         raise HTTPException(status_code=404, detail="Country not found.")
 
     beers = (
-        [BeerResponseBase(id=beer.id, name=beer.name) for beer in country.beers]
+        [
+            BeerResponseBase(id=beer.id, name=beer.name, rating=beer.rating)
+            for beer in country.beers
+        ]
         if include_beers
         else None
     )
@@ -133,7 +139,7 @@ async def update_country_endpoint(
         name=updated_country.name,
         description=updated_country.description,
         beers=[
-            BeerResponseBase(id=beer.id, name=beer.name)
+            BeerResponseBase(id=beer.id, name=beer.name, rating=beer.rating)
             for beer in updated_country.beers
         ],
     )

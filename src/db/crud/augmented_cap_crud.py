@@ -27,13 +27,13 @@ async def get_augmented_cap_by_id(
 
 async def get_all_augmented_caps(session: AsyncSession) -> List[AugmentedCap]:
     result = await session.execute(select(AugmentedCap))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
-async def delete_augmented_cap(session: AsyncSession, augmented_cap_id: int) -> None:
+async def delete_augmented_cap(session: AsyncSession, augmented_cap_id: int) -> bool:
     aug = await get_augmented_cap_by_id(session, augmented_cap_id)
     if aug:
         await session.delete(aug)
         await session.commit()
-
-    return aug is not None
+        return True
+    return False

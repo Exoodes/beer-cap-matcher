@@ -64,7 +64,7 @@ async def get_all_beers(
         stmt = stmt.options(selectinload(Beer.country))
 
     result = await session.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 async def delete_beer(session: AsyncSession, beer_id: int) -> bool:

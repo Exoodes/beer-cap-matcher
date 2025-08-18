@@ -1,5 +1,3 @@
-# File: src/api/routers/beer_cap_router.py
-
 import io
 import logging
 from datetime import date
@@ -59,17 +57,19 @@ async def create_cap_endpoint(
     - If `beer_name` is provided, a new beer is created. The beer brand and country
       will be linked by ID or created by name based on the provided values.
     """
-    contents = await file.read()
-
-    if not file.content_type.startswith("image/"):
+    if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(
             status_code=400, detail="Invalid file type. Only images are allowed."
         )
 
+    content_type: str = file.content_type
+    filename: str = file.filename or "uploaded_file"
+
+    contents = await file.read()
     file_like = io.BytesIO(contents)
 
     cap_data = BeerCapCreateSchema(
-        filename=file.filename,
+        filename=filename,
         variant_name=variant_name,
         collected_date=collected_date,
         beer_id=beer_id,
@@ -84,7 +84,7 @@ async def create_cap_endpoint(
         cap_metadata=cap_data,
         image_data=file_like,
         image_length=len(contents),
-        content_type=file.content_type,
+        content_type=content_type,
     )
 
     if not beer_cap:

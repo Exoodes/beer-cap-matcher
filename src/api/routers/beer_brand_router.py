@@ -61,7 +61,10 @@ async def get_all_beer_brands_endpoint(
             id=b.id,
             name=b.name,
             beers=(
-                [BeerResponseBase(id=beer.id, name=beer.name) for beer in b.beers]
+                [
+                    BeerResponseBase(id=beer.id, name=beer.name, rating=beer.rating)
+                    for beer in b.beers
+                ]
                 if include_beers
                 else None
             ),
@@ -85,7 +88,10 @@ async def get_beer_brand_by_id_endpoint(
         raise HTTPException(status_code=404, detail="beer_brand not found.")
 
     beers = (
-        [BeerResponseBase(id=beer.id, name=beer.name) for beer in beer_brand.beers]
+        [
+            BeerResponseBase(id=beer.id, name=beer.name, rating=beer.rating)
+            for beer in beer_brand.beers
+        ]
         if include_beers
         else None
     )
@@ -133,7 +139,10 @@ async def update_beer_brand_endpoint(
     logger.info(
         "Updated beer_brand %s with data: %s", beer_brand_id, update_data.model_dump()
     )
-    beers = [BeerResponseBase(id=beer.id, name=beer.name) for beer in beer_brand.beers]
+    beers = [
+        BeerResponseBase(id=beer.id, name=beer.name, rating=beer.rating)
+        for beer in beer_brand.beers
+    ]
     return BeerBrandResponseWithBeers(
         id=beer_brand.id,
         name=beer_brand.name,

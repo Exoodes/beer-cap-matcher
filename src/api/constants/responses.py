@@ -1,6 +1,6 @@
-from typing import Dict
+from typing import Any, Dict
 
-ResponseDict = Dict[int, dict]
+ResponseDict = dict[int | str, dict[str, Any]]
 
 ERROR_DESCRIPTIONS = {
     401: "Unauthorized",

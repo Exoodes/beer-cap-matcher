@@ -1,8 +1,7 @@
 import logging
-from typing import List
+from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.params import Depends
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.constants.responses import INTERNAL_SERVER_ERROR_RESPONSE
@@ -31,10 +30,12 @@ router = APIRouter(prefix="/augmented_caps", tags=["Augmented Caps"])
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def generate_all_augmented_caps(
+    cap_detection_service: Annotated[
+        CapDetectionService, Depends(get_cap_detection_service)
+    ],
     augmentations_per_image: int = Query(
         ..., gt=-1, lt=100, description="Number of augmentations per image"
     ),
-    cap_detection_service: CapDetectionService = Depends(get_cap_detection_service),
 ) -> StatusResponse:
     """
     Generate all augmented images for caps.
@@ -52,7 +53,9 @@ async def generate_all_augmented_caps(
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def generate_embeddings(
-    cap_detection_service: CapDetectionService = Depends(get_cap_detection_service),
+    cap_detection_service: Annotated[
+        CapDetectionService, Depends(get_cap_detection_service)
+    ],
 ) -> StatusResponse:
     """
     Generate embeddings for all augmented caps.
@@ -71,7 +74,9 @@ async def generate_embeddings(
 )
 async def generate_index(
     request: Request,
-    cap_detection_service: CapDetectionService = Depends(get_cap_detection_service),
+    cap_detection_service: Annotated[
+        CapDetectionService, Depends(get_cap_detection_service)
+    ],
 ) -> StatusResponse:
     """
     Generate index for all augmented cap embeddings.
@@ -92,10 +97,10 @@ async def generate_index(
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def get_all_beer_caps(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
     include_embedding_vector: bool = Query(
         False, description="Include embedding vector in response"
     ),
-    db: AsyncSession = Depends(get_db_session),
 ) -> List[AugmentedBeerCapResponse]:
     """
     Retrieve all augmented beer caps.
@@ -116,7 +121,7 @@ async def get_all_beer_caps(
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def delete_all_augmented_caps(
-    beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
+    beer_cap_facade: Annotated[BeerCapFacade, Depends(get_beer_cap_facade)],
 ) -> StatusResponse:
     """
     Delete all augmented caps.
@@ -138,7 +143,7 @@ async def delete_all_augmented_caps(
 )
 async def delete_augmented_cap(
     cap_id: int,
-    beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
+    beer_cap_facade: Annotated[BeerCapFacade, Depends(get_beer_cap_facade)],
 ) -> StatusResponse:
     """
     Delete a specific augmented cap by its ID.

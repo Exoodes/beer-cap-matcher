@@ -37,7 +37,7 @@ def _process_image_for_embedding(
     img_pil = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
     img_pil = background_remover.remove_background(img_pil)
     img_pil = crop_transparent(img_pil)
-    return img_pil.resize(image_size, Image.LANCZOS)
+    return img_pil.resize(image_size, Image.Resampling.LANCZOS)
 
 
 class ImageAugmenter:

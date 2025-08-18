@@ -39,7 +39,6 @@ async def get_country_by_id(
 
 
 async def get_country_by_name(session: AsyncSession, name: str) -> Optional[Country]:
-    """Retrieves a single country by its name."""
     stmt = select(Country).where(Country.name == name)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
@@ -55,7 +54,7 @@ async def get_all_countries(
         stmt = stmt.options(selectinload(Country.beers))
 
     result = await session.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 async def delete_country(session: AsyncSession, country_id: int) -> bool:

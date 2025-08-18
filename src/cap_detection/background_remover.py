@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import torch
 from PIL import Image
-from torchvision import transforms
+from torchvision import transforms  # type: ignore[import-untyped]
 
 from src.utils.logger import get_logger
 from src.utils.u2net_model import U2NET

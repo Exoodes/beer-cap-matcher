@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -64,7 +64,7 @@ async def get_beer_caps_by_beer_id(
         stmt = stmt.options(selectinload(BeerCap.beer))
 
     result = await session.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 async def get_all_beer_caps(
@@ -80,7 +80,7 @@ async def get_all_beer_caps(
         stmt = stmt.options(selectinload(BeerCap.beer))
 
     result = await session.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 async def delete_beer_cap(session: AsyncSession, beer_cap_id: int) -> bool:
@@ -119,7 +119,7 @@ async def update_beer_cap(
         beer_cap.beer_id = update_data.beer_id
 
     if update_data.collected_date is not None:
-        beer_cap.collected_date = update_data.collected_date
+        setattr(beer_cap, "collected_date", update_data.collected_date)
 
     await session.commit()
     await session.refresh(beer_cap)
