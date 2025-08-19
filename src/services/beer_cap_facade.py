@@ -99,8 +99,7 @@ class BeerCapFacade:
         image_length: int,
         content_type: str = "image/png",
     ) -> Optional[BeerCap]:
-        session = self.session_maker()
-        async with session:
+        async with self.session_maker() as session:
             if cap_metadata.beer_id:
                 beer = await get_beer_by_id(session, cap_metadata.beer_id)
                 if not beer:
@@ -150,8 +149,7 @@ class BeerCapFacade:
         image_length: int,
         content_type: str = "image/png",
     ) -> BeerCap:
-        session = self.session_maker()
-        async with session:
+        async with self.session_maker() as session:
             beer = await create_beer(session, beer_name, beer_brand_id, commit=False)
 
             object_name = cap_metadata.filename
@@ -181,8 +179,7 @@ class BeerCapFacade:
         image_length: int,
         content_type: str = "image/png",
     ) -> Optional[BeerCap]:
-        session = self.session_maker()
-        async with session:
+        async with self.session_maker() as session:
             beer = await get_beer_by_id(session, beer_id)
             if not beer:
                 return None
@@ -221,8 +218,7 @@ class BeerCapFacade:
         return beer_cap
 
     async def delete_beer_cap_and_its_augmented_caps(self, beer_cap_id: int) -> bool:
-        session = self.session_maker()
-        async with session:
+        async with self.session_maker() as session:
             beer_cap = await get_beer_cap_by_id(
                 session, beer_cap_id, load_augmented_caps=True
             )
@@ -241,8 +237,7 @@ class BeerCapFacade:
             return True
 
     async def delete_augmented_caps(self, beer_cap_id: int) -> bool:
-        session = self.session_maker()
-        async with session:
+        async with self.session_maker() as session:
             result = await self._delete_augmented_caps_helper(session, beer_cap_id)
             await session.commit()
 
@@ -250,8 +245,7 @@ class BeerCapFacade:
 
     async def delete_all_augmented_caps(self) -> int:
         deleted_count = 0
-        session = self.session_maker()
-        async with session:
+        async with self.session_maker() as session:
             augmented_caps = await get_all_augmented_caps(session)
             for aug in augmented_caps:
                 self.minio_wrapper.delete_file(self.augmented_caps_bucket, aug.s3_key)
@@ -262,8 +256,7 @@ class BeerCapFacade:
         return deleted_count
 
     async def delete_beer_and_caps(self, beer_id: int) -> bool:
-        session = self.session_maker()
-        async with session:
+        async with self.session_maker() as session:
             beer = await get_beer_by_id(session, beer_id, load_caps=True)
             if not beer:
                 return False
@@ -285,8 +278,7 @@ class BeerCapFacade:
         image_length: int,
         content_type: str = "image/png",
     ) -> Optional[AugmentedCap]:
-        session = self.session_maker()
-        async with session:
+        async with self.session_maker() as session:
             beer_cap = await get_beer_cap_by_id(session, beer_cap_id)
             if not beer_cap:
                 return None
