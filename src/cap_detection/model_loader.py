@@ -1,6 +1,5 @@
-from typing import Tuple
-
 from functools import lru_cache
+from typing import Tuple
 
 import clip  # type: ignore[import-untyped]
 import torch
