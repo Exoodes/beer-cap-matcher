@@ -4,7 +4,6 @@ from typing import Any, Callable, Dict, Iterable, List, Tuple
 import numpy as np
 import torch
 from PIL import Image
-from torchvision.utils import save_image  # type: ignore[import-untyped]
 
 from src.cap_detection.model_loader import load_model_and_preprocess
 from src.utils.logger import get_logger
@@ -49,8 +48,6 @@ class EmbeddingGenerator:
         image_rgb = Image.fromarray(rgb)
 
         image_tensor = self.preprocess(image_rgb).unsqueeze(0).to(self.device)
-
-        save_image(image_tensor, "embed_tensor.png")
 
         with torch.no_grad():
             embedding = self.model.encode_image(image_tensor)

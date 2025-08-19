@@ -7,7 +7,6 @@ import faiss  # type: ignore[import-untyped]
 import numpy as np
 import torch
 from PIL import Image
-from torchvision.utils import save_image  # type: ignore[import-untyped]
 
 from src.cap_detection.background_remover import BackgroundRemover
 from src.cap_detection.image_processor import _process_image_for_embedding
@@ -62,7 +61,6 @@ class ImageQuerier:
 
         logger.info("Querying image from bytes")
         image_tensor = self._process_image_bytes(image_bytes)
-        save_image(image_tensor, "query_tensor.png")
         results = self._query_embedding(image_tensor, faiss_k)
         full_results = self._aggregate_results(results)
 
