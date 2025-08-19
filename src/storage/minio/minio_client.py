@@ -2,6 +2,7 @@ import concurrent.futures
 import os
 from datetime import timedelta
 from typing import BinaryIO, Optional
+from urllib.parse import urlparse
 
 from minio import Minio
 from minio.error import S3Error
@@ -10,9 +11,6 @@ from src.config.settings import settings
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
-
-
-from urllib.parse import urlparse
 
 
 class MinioClientWrapper:
@@ -30,20 +28,33 @@ class MinioClientWrapper:
 
         # If a path sneaks in (including trailing "/"), strip it but WARN so you can fix envs
         if parsed.path and parsed.path != "":
-            logger.warning("MINIO_ENDPOINT contained a path '%s' -> stripping it. Raw: %r", parsed.path, raw)
+            logger.warning(
+                "MINIO_ENDPOINT contained a path '%s' -> stripping it. Raw: %r",
+                parsed.path,
+                raw,
+            )
 
         host = parsed.hostname or ""
         port = (
-            f":{parsed.port}" if parsed.port else (f":{parsed.netloc.split(':',1)[1]}" if ":" in parsed.netloc else "")
+            f":{parsed.port}"
+            if parsed.port
+            else (f":{parsed.netloc.split(':',1)[1]}" if ":" in parsed.netloc else "")
         )
         hostport = f"{host}{port}" if host else (parsed.netloc or raw.split("/", 1)[0])
 
         # Decide secure: prefer scheme if present, otherwise use provided flag/env
         secure_flag = (
-            (parsed.scheme == "https") if parsed.scheme else (secure if secure is not None else settings.minio_secure)
+            (parsed.scheme == "https")
+            if parsed.scheme
+            else (secure if secure is not None else settings.minio_secure)
         )
 
-        logger.info("Initializing MinIO client with endpoint=%r (normalized=%r), secure=%s", raw, hostport, secure_flag)
+        logger.info(
+            "Initializing MinIO client with endpoint=%r (normalized=%r), secure=%s",
+            raw,
+            hostport,
+            secure_flag,
+        )
 
         self.client = Minio(
             hostport,
@@ -84,10 +95,16 @@ class MinioClientWrapper:
                     length = data.tell()
                     data.seek(current_pos)
                 else:
-                    raise ValueError("Cannot determine length of non-seekable stream. Please provide length.")
+                    raise ValueError(
+                        "Cannot determine length of non-seekable stream. Please provide length."
+                    )
 
             self.client.put_object(
-                bucket_name=bucket_name, object_name=object_name, data=data, length=length, content_type=content_type
+                bucket_name=bucket_name,
+                object_name=object_name,
+                data=data,
+                length=length,
+                content_type=content_type,
             )
             logger.info("Uploaded %s to %s.", object_name, bucket_name)
             return object_name
@@ -128,9 +145,13 @@ class MinioClientWrapper:
             return True
         except S3Error as e:
             if e.code == "NoSuchKey":
-                logger.info("Object %s does not exist in bucket %s.", object_name, bucket_name)
+                logger.info(
+                    "Object %s does not exist in bucket %s.", object_name, bucket_name
+                )
                 return False
-            logger.error("Error checking existence of %s in %s: %s", object_name, bucket_name, e)
+            logger.error(
+                "Error checking existence of %s in %s: %s", object_name, bucket_name, e
+            )
             return False
 
     def download_bytes(self, bucket_name: str, object_name: str) -> bytes:
@@ -153,14 +174,18 @@ class MinioClientWrapper:
             logger.info("Downloaded %s from %s.", object_name, bucket_name)
             return data
         except S3Error as e:
-            logger.error("Failed to download %s from %s: %s", object_name, bucket_name, e)
+            logger.error(
+                "Failed to download %s from %s: %s", object_name, bucket_name, e
+            )
             raise
         finally:
             if response:
                 response.close()
                 response.release_conn()
 
-    def generate_presigned_url(self, bucket_name: str, object_name: str, expiry_seconds: int = 3600) -> str:
+    def generate_presigned_url(
+        self, bucket_name: str, object_name: str, expiry_seconds: int = 3600
+    ) -> str:
         """Generates a presigned URL for temporary access to an object.
 
         Args:
@@ -175,11 +200,20 @@ class MinioClientWrapper:
             S3Error: If URL generation fails.
         """
         try:
-            url = self.client.presigned_get_object(bucket_name, object_name, expires=timedelta(seconds=expiry_seconds))
-            logger.info("Generated presigned URL for %s in %s.", object_name, bucket_name)
+            url = self.client.presigned_get_object(
+                bucket_name, object_name, expires=timedelta(seconds=expiry_seconds)
+            )
+            logger.info(
+                "Generated presigned URL for %s in %s.", object_name, bucket_name
+            )
             return url
         except S3Error as e:
-            logger.error("Failed to generate presigned URL for %s in %s: %s", object_name, bucket_name, e)
+            logger.error(
+                "Failed to generate presigned URL for %s in %s: %s",
+                object_name,
+                bucket_name,
+                e,
+            )
             raise
 
     def ensure_buckets_exist(self, buckets: list[str]) -> None:
@@ -197,7 +231,11 @@ class MinioClientWrapper:
                 logger.info("Bucket already exists: %s", bucket)
 
     def download_all_objects_parallel(
-        self, bucket_name: str, prefix: str = "", recursive: bool = True, max_workers: int = 8
+        self,
+        bucket_name: str,
+        prefix: str = "",
+        recursive: bool = True,
+        max_workers: int = 8,
     ) -> list[tuple[str, bytes]]:
         """Downloads all objects from a bucket in parallel and returns their contents.
 
@@ -211,7 +249,10 @@ class MinioClientWrapper:
             list[tuple[str, bytes]]: A list of (object_name, object_data) tuples.
         """
         object_names = [
-            obj.object_name for obj in self.client.list_objects(bucket_name, prefix=prefix, recursive=recursive)
+            obj.object_name
+            for obj in self.client.list_objects(
+                bucket_name, prefix=prefix, recursive=recursive
+            )
         ]
 
         def download_object(name: str) -> tuple[str, bytes]:
@@ -228,7 +269,9 @@ class MinioClientWrapper:
 
         results = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_name = {executor.submit(download_object, name): name for name in object_names}
+            future_to_name = {
+                executor.submit(download_object, name): name for name in object_names
+            }
             for future in concurrent.futures.as_completed(future_to_name):
                 result = future.result()
                 if result[1]:

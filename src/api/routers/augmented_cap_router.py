@@ -1,15 +1,19 @@
 import logging
-from typing import List
+from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.params import Depends
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.constants.responses import INTERNAL_SERVER_ERROR_RESPONSE
 from src.api.dependencies.db import get_db_session
 from src.api.dependencies.facades import get_beer_cap_facade
-from src.api.dependencies.services import get_cap_detection_service, reload_query_service_index
-from src.api.schemas.augmented_beer_cap.augmented_beer_cap_response import AugmentedBeerCapResponse
+from src.api.dependencies.services import (
+    get_cap_detection_service,
+    reload_query_service_index,
+)
+from src.api.schemas.augmented_beer_cap.augmented_beer_cap_response import (
+    AugmentedBeerCapResponse,
+)
 from src.api.schemas.common.status_response import StatusResponse
 from src.db.crud.augmented_cap_crud import get_all_augmented_caps
 from src.services.beer_cap_facade import BeerCapFacade
@@ -26,15 +30,21 @@ router = APIRouter(prefix="/augmented_caps", tags=["Augmented Caps"])
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def generate_all_augmented_caps(
-    augmentations_per_image: int = Query(..., gt=-1, lt=100, description="Number of augmentations per image"),
-    cap_detection_service: CapDetectionService = Depends(get_cap_detection_service),
+    cap_detection_service: Annotated[
+        CapDetectionService, Depends(get_cap_detection_service)
+    ],
+    augmentations_per_image: int = Query(
+        ..., gt=-1, lt=100, description="Number of augmentations per image"
+    ),
 ) -> StatusResponse:
     """
     Generate all augmented images for caps.
     """
     generated_count = await cap_detection_service.preprocess(augmentations_per_image)
     logger.info("Generated %s augmented images", generated_count)
-    return StatusResponse(success=True, message=f"Generated {generated_count} augmented images")
+    return StatusResponse(
+        success=True, message=f"Generated {generated_count} augmented images"
+    )
 
 
 @router.post(
@@ -43,14 +53,18 @@ async def generate_all_augmented_caps(
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def generate_embeddings(
-    cap_detection_service: CapDetectionService = Depends(get_cap_detection_service),
+    cap_detection_service: Annotated[
+        CapDetectionService, Depends(get_cap_detection_service)
+    ],
 ) -> StatusResponse:
     """
     Generate embeddings for all augmented caps.
     """
     embeddings_count = await cap_detection_service.generate_embeddings()
     logger.info("Generated %s embeddings", embeddings_count)
-    return StatusResponse(success=True, message=f"Generated {embeddings_count} embeddings")
+    return StatusResponse(
+        success=True, message=f"Generated {embeddings_count} embeddings"
+    )
 
 
 @router.post(
@@ -60,7 +74,9 @@ async def generate_embeddings(
 )
 async def generate_index(
     request: Request,
-    cap_detection_service: CapDetectionService = Depends(get_cap_detection_service),
+    cap_detection_service: Annotated[
+        CapDetectionService, Depends(get_cap_detection_service)
+    ],
 ) -> StatusResponse:
     """
     Generate index for all augmented cap embeddings.
@@ -70,7 +86,9 @@ async def generate_index(
 
     await reload_query_service_index(request)
 
-    return StatusResponse(success=True, message=f"Generated index for {index_count} embeddings")
+    return StatusResponse(
+        success=True, message=f"Generated index for {index_count} embeddings"
+    )
 
 
 @router.get(
@@ -79,15 +97,20 @@ async def generate_index(
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def get_all_beer_caps(
-    include_embedding_vector: bool = Query(False, description="Include embedding vector in response"),
-    db: AsyncSession = Depends(get_db_session),
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    include_embedding_vector: bool = Query(
+        False, description="Include embedding vector in response"
+    ),
 ) -> List[AugmentedBeerCapResponse]:
     """
     Retrieve all augmented beer caps.
     """
     augmented_caps = await get_all_augmented_caps(db)
     return [
-        AugmentedBeerCapResponse(id=cap.id, embedding_vector=cap.embedding_vector if include_embedding_vector else None)
+        AugmentedBeerCapResponse(
+            id=cap.id,
+            embedding_vector=cap.embedding_vector if include_embedding_vector else None,
+        )
         for cap in augmented_caps
     ]
 
@@ -98,14 +121,16 @@ async def get_all_beer_caps(
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def delete_all_augmented_caps(
-    beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
+    beer_cap_facade: Annotated[BeerCapFacade, Depends(get_beer_cap_facade)],
 ) -> StatusResponse:
     """
     Delete all augmented caps.
     """
     deleted_count = await beer_cap_facade.delete_all_augmented_caps()
     logger.info("Deleted %s augmented caps", deleted_count)
-    return StatusResponse(success=True, message=f"Deleted {deleted_count} augmented caps")
+    return StatusResponse(
+        success=True, message=f"Deleted {deleted_count} augmented caps"
+    )
 
 
 @router.delete(
@@ -118,7 +143,7 @@ async def delete_all_augmented_caps(
 )
 async def delete_augmented_cap(
     cap_id: int,
-    beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
+    beer_cap_facade: Annotated[BeerCapFacade, Depends(get_beer_cap_facade)],
 ) -> StatusResponse:
     """
     Delete a specific augmented cap by its ID.

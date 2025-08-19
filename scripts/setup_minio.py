@@ -21,7 +21,9 @@ async def ensure_buckets_exist() -> None:
     ]
 
     if not all(buckets):
-        raise ValueError("One or more required MINIO_*_BUCKET environment variables are not set.")
+        raise ValueError(
+            "One or more required MINIO_*_BUCKET environment variables are not set."
+        )
 
     minio_wrapper = MinioClientWrapper()
     minio_wrapper.ensure_buckets_exist(buckets)

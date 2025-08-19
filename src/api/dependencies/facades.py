@@ -5,7 +5,9 @@ from src.services.beer_cap_facade import BeerCapFacade
 from src.storage.minio.minio_client import MinioClientWrapper
 
 
-def get_beer_cap_facade(minio_client: MinioClientWrapper = Depends(get_minio_client)) -> BeerCapFacade:
+def get_beer_cap_facade(
+    minio_client: MinioClientWrapper = Depends(get_minio_client),
+) -> BeerCapFacade:
     """FastAPI dependency to get a `BeerCapFacade` instance.
 
     Args:

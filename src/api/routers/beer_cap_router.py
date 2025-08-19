@@ -1,5 +1,3 @@
-# File: src/api/routers/beer_cap_router.py
-
 import io
 import logging
 from datetime import date
@@ -8,7 +6,10 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.constants.responses import INTERNAL_SERVER_ERROR_RESPONSE, NOT_FOUND_RESPONSE
+from src.api.constants.responses import (
+    INTERNAL_SERVER_ERROR_RESPONSE,
+    NOT_FOUND_RESPONSE,
+)
 from src.api.dependencies.db import get_db_session
 from src.api.dependencies.facades import get_beer_cap_facade
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
@@ -16,7 +17,12 @@ from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponseWithUrl
 from src.api.schemas.beer_cap.beer_cap_update import BeerCapUpdateSchema
 from src.api.schemas.common.status_response import StatusResponse
 from src.api.utils import build_beer_cap_response
-from src.db.crud.beer_cap_crud import get_all_beer_caps, get_beer_cap_by_id, get_beer_caps_by_beer_id, update_beer_cap
+from src.db.crud.beer_cap_crud import (
+    get_all_beer_caps,
+    get_beer_cap_by_id,
+    get_beer_caps_by_beer_id,
+    update_beer_cap,
+)
 from src.services.beer_cap_facade import BeerCapFacade
 
 logger = logging.getLogger(__name__)
@@ -51,15 +57,19 @@ async def create_cap_endpoint(
     - If `beer_name` is provided, a new beer is created. The beer brand and country
       will be linked by ID or created by name based on the provided values.
     """
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=400, detail="Invalid file type. Only images are allowed."
+        )
+
+    content_type: str = file.content_type
+    filename: str = file.filename or "uploaded_file"
+
     contents = await file.read()
-
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Invalid file type. Only images are allowed.")
-
     file_like = io.BytesIO(contents)
 
     cap_data = BeerCapCreateSchema(
-        filename=file.filename,
+        filename=filename,
         variant_name=variant_name,
         collected_date=collected_date,
         beer_id=beer_id,
@@ -74,13 +84,15 @@ async def create_cap_endpoint(
         cap_metadata=cap_data,
         image_data=file_like,
         image_length=len(contents),
-        content_type=file.content_type,
+        content_type=content_type,
     )
 
     if not beer_cap:
         raise HTTPException(status_code=404, detail="Beer not found.")
 
-    logger.info("Successfully created beer cap %s for beer %s", beer_cap.id, beer_cap.beer.name)
+    logger.info(
+        "Successfully created beer cap %s for beer %s", beer_cap.id, beer_cap.beer.name
+    )
 
     return build_beer_cap_response(beer_cap, beer_cap_facade)
 

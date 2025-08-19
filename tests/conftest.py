@@ -20,14 +20,18 @@ TEST_IMAGE_CONTENT_TYPE = "image/jpeg"
 
 TEST_POSTGRES_DATABASE_URL = settings.test_postgres_database_url
 if not TEST_POSTGRES_DATABASE_URL:
-    raise ValueError("TEST_POSTGRES_DATABASE_URL environment variable is not set in .env or your shell.")
+    raise ValueError(
+        "TEST_POSTGRES_DATABASE_URL environment variable is not set in .env or your shell."
+    )
 
 TEST_MINIO_ENDPOINT = settings.test_minio_url
 TEST_MINIO_ACCESS_KEY = settings.test_minio_access_key
 TEST_MINIO_SECRET_KEY = settings.test_minio_secret_key
 
 if not all([TEST_MINIO_ENDPOINT, TEST_MINIO_ACCESS_KEY, TEST_MINIO_SECRET_KEY]):
-    raise ValueError("One or more TEST_MINIO_* environment variables are not set in .env or your shell.")
+    raise ValueError(
+        "One or more TEST_MINIO_* environment variables are not set in .env or your shell."
+    )
 
 
 @pytest.fixture(scope="session")
@@ -57,7 +61,9 @@ def mock_minio_client_wrapper() -> MagicMock:
     mock_s3_key = "mock_s3_key.jpg"
     mock_minio.upload_file.return_value = mock_s3_key
     mock_minio.download_bytes.return_value = b"mock image data"
-    mock_minio.generate_presigned_url.return_value = f"{TEST_MINIO_ENDPOINT}/{TEST_BUCKET_NAME}/{mock_s3_key}"
+    mock_minio.generate_presigned_url.return_value = (
+        f"{TEST_MINIO_ENDPOINT}/{TEST_BUCKET_NAME}/{mock_s3_key}"
+    )
     mock_minio.delete_file.return_value = None
     return mock_minio
 

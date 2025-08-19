@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import torch
 from PIL import Image
-from torchvision import transforms
+from torchvision import transforms  # type: ignore[import-untyped]
 
 from src.utils.logger import get_logger
 from src.utils.u2net_model import U2NET
@@ -21,7 +21,9 @@ class BackgroundRemover:
         self.model.to(self.device)
         self.model.eval()
 
-        self.transform = transforms.Compose([transforms.Resize((320, 320)), transforms.ToTensor()])
+        self.transform = transforms.Compose(
+            [transforms.Resize((320, 320)), transforms.ToTensor()]
+        )
 
     def remove_background(self, image: Union[Image.Image, np.ndarray]) -> Image.Image:
         if isinstance(image, np.ndarray):

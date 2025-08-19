@@ -1,15 +1,22 @@
 from typing import Tuple
 
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from src.config.settings import settings
 
 
-def get_db_resources(database_url: str, echo: bool = False) -> Tuple[AsyncEngine, sessionmaker]:
-
+def get_db_resources(
+    database_url: str, echo: bool = False
+) -> Tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
     engine = create_async_engine(database_url, echo=echo, future=True)
-    async_session = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+    async_session = async_sessionmaker(
+        engine, expire_on_commit=False, class_=AsyncSession
+    )
     return engine, async_session
 
 

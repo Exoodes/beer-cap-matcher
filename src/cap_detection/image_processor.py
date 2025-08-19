@@ -37,7 +37,7 @@ def _process_image_for_embedding(
     img_pil = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
     img_pil = background_remover.remove_background(img_pil)
     img_pil = crop_transparent(img_pil)
-    return img_pil.resize(image_size, Image.LANCZOS)
+    return img_pil.resize(image_size, Image.Resampling.LANCZOS)
 
 
 class ImageAugmenter:
@@ -57,7 +57,9 @@ class ImageAugmenter:
         Augment a single image provided as bytes and return a list of augmented image bytes (including the original).
         The processing pipeline is now handled by the new utility function.
         """
-        processed_image = _process_image_for_embedding(image_bytes, self.background_remover, self.image_size)
+        processed_image = _process_image_for_embedding(
+            image_bytes, self.background_remover, self.image_size
+        )
         img_array = np.array(processed_image)
 
         if img_array.shape[-1] == 4:

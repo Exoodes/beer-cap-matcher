@@ -4,9 +4,9 @@ import os
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Awaitable, Callable
+from typing import Callable
 
-import faiss
+import faiss  # type: ignore[import-untyped]
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.cap_detection.embedding_generator import EmbeddingGenerator
@@ -25,7 +25,7 @@ class CapDetectionService:
     def __init__(
         self,
         minio_wrapper: MinioClientWrapper,
-        session_maker: Callable[[], Awaitable[AsyncSession]] = GLOBAL_ASYNC_SESSION_MAKER,
+        session_maker: Callable[[], AsyncSession] = GLOBAL_ASYNC_SESSION_MAKER,
         u2net_model_path: str | None = None,
     ) -> None:
         self.minio_wrapper = minio_wrapper
@@ -34,36 +34,50 @@ class CapDetectionService:
         self.original_caps_bucket = settings.minio_original_caps_bucket
         self.augmented_caps_bucket = settings.minio_augmented_caps_bucket
         self.index_bucket = settings.minio_augmented_caps_bucket
-        self.u2net_model_path = u2net_model_path or settings.u2net_model_path
+        self.u2net_model_path: Path = Path(
+            u2net_model_path or settings.u2net_model_path
+        )
         self.index_file_name = settings.minio_index_file_name
         self.metadata_file_name = settings.minio_metadata_file_name
 
-        self.embedding_generator = EmbeddingGenerator(self.u2net_model_path)
+        self.embedding_generator = EmbeddingGenerator()
         self.index_builder = IndexBuilder()
 
     async def preprocess(self, augmentations_per_image: int) -> int:
         created = 0
 
-        async with self.session_maker() as session:
+        session = self.session_maker()
+        async with session:
             beer_caps = await get_all_beer_caps(session)
             augmenter = ImageAugmenter(
-                u2net_model_path=self.u2net_model_path, augmentations_per_image=augmentations_per_image
+                u2net_model_path=self.u2net_model_path,
+                augmentations_per_image=augmentations_per_image,
             )
 
             def process_cap(cap):
-                original_bytes = self.minio_wrapper.download_bytes(self.original_caps_bucket, cap.s3_key)
+                original_bytes = self.minio_wrapper.download_bytes(
+                    self.original_caps_bucket, cap.s3_key
+                )
                 augmented_images = augmenter.augment_image_bytes(original_bytes)
                 return cap, augmented_images
 
             loop = asyncio.get_running_loop()
             with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-                results = await asyncio.gather(*[loop.run_in_executor(executor, process_cap, cap) for cap in beer_caps])
+                results = await asyncio.gather(
+                    *[
+                        loop.run_in_executor(executor, process_cap, cap)
+                        for cap in beer_caps
+                    ]
+                )
 
             for cap, augmented_images in results:
                 for idx, aug_bytes in enumerate(augmented_images):
                     object_name = f"{Path(cap.s3_key).stem}_aug_{idx:03d}.png"
                     self.minio_wrapper.upload_file(
-                        self.augmented_caps_bucket, object_name, io.BytesIO(aug_bytes), len(aug_bytes)
+                        self.augmented_caps_bucket,
+                        object_name,
+                        io.BytesIO(aug_bytes),
+                        len(aug_bytes),
                     )
                     await create_augmented_cap(session, cap.id, object_name)
                     created += 1
@@ -72,9 +86,8 @@ class CapDetectionService:
         return created
 
     async def generate_embeddings(self) -> dict:
-        """Generate embeddings for augmented beer caps."""
-
-        async with self.session_maker() as session:
+        session = self.session_maker()
+        async with session:
             augmented_caps = await get_all_augmented_caps(session)
 
             for aug_cap in augmented_caps:
@@ -94,8 +107,8 @@ class CapDetectionService:
             return {"updated_embeddings": len(augmented_caps)}
 
     async def generate_index(self) -> int:
-        """Generate FAISS index for augmented beer caps and store it in MinIO."""
-        async with self.session_maker() as session:
+        session = self.session_maker()
+        async with session:
             augmented_caps = await get_all_augmented_caps(session)
 
             embeddings = []
@@ -105,7 +118,9 @@ class CapDetectionService:
                     embeddings.append(aug_cap.embedding_vector)
                     metadata.append(aug_cap.id)
 
-            index, metadata_blob = await asyncio.to_thread(self.index_builder.build_index, embeddings, metadata)
+            index, metadata_blob = await asyncio.to_thread(
+                self.index_builder.build_index, embeddings, metadata
+            )
 
             with tempfile.NamedTemporaryFile(suffix=".index") as tmp:
                 faiss.write_index(index, tmp.name)

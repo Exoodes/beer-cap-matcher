@@ -1,9 +1,9 @@
 import asyncio
 import pickle
 import tempfile
-from typing import Awaitable, Callable, List, Tuple
+from typing import Any, Callable, List, Tuple, cast
 
-import faiss
+import faiss  # type: ignore[import-untyped]
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.cap_detection.image_querier import AggregatedResult, ImageQuerier
@@ -21,7 +21,7 @@ class QueryService:
     def __init__(
         self,
         minio_wrapper: MinioClientWrapper,
-        session_maker: Callable[[], Awaitable[AsyncSession]] = GLOBAL_ASYNC_SESSION_MAKER,
+        session_maker: Callable[[], AsyncSession] = GLOBAL_ASYNC_SESSION_MAKER,
     ) -> None:
         self.session_maker = session_maker
         self.minio_wrapper = minio_wrapper
@@ -31,16 +31,16 @@ class QueryService:
         self.index_bucket = settings.minio_augmented_caps_bucket
         self.u2net_model_path = settings.u2net_model_path
 
-        self.index = None
-        self.metadata = None
-        self.querier = None
+        self.index: Any | None = None
+        self.metadata: list[int] | None = None
+        self.querier: ImageQuerier | None = None
 
     async def load_index(self) -> None:
-        """Download FAISS index and metadata from MinIO and return them."""
-
         if not self.minio_wrapper.object_exists(
             self.index_bucket, self.index_file_name
-        ) or not self.minio_wrapper.object_exists(self.index_bucket, self.metadata_file_name):
+        ) or not self.minio_wrapper.object_exists(
+            self.index_bucket, self.metadata_file_name
+        ):
             return
 
         index_bytes = await asyncio.to_thread(
@@ -60,21 +60,22 @@ class QueryService:
             tmp.flush()
             index = faiss.read_index(tmp.name)
 
-        metadata = pickle.loads(metadata_blob)
+        metadata = cast(list[int], pickle.loads(metadata_blob))
 
         self.index = index
         self.metadata = metadata
 
-        async with self.session_maker() as session:
+        session = self.session_maker()
+        async with session:
             augmented_caps = await get_all_augmented_caps(session)
 
-        augmented_cap_to_cap = {aug.id: aug.beer_cap_id for aug in augmented_caps}
+        augmented_cap_to_cap = {str(aug.id): aug.beer_cap_id for aug in augmented_caps}
 
         self.querier = ImageQuerier(
             index=self.index,
             metadata=self.metadata,
             augmented_cap_to_cap=augmented_cap_to_cap,
-            u2net_model_path=self.u2net_model_path,
+            u2net_model_path=str(self.u2net_model_path),
         )
 
     async def query_image(
@@ -83,12 +84,18 @@ class QueryService:
         top_k: int = 3,
         faiss_k: int = 10000,
     ) -> Tuple[List[BeerCap], List[AggregatedResult]]:
-        """Query the FAISS index with an image."""
-        results = self.querier.query(image_bytes=image_bytes, top_k=top_k, faiss_k=faiss_k)
-        print(f"Queried {len(results)} results")
-        caps = []
+        if self.querier is None:
+            raise RuntimeError("Index not loaded; call load_index() first")
 
-        async with self.session_maker() as session:
+        results = self.querier.query(
+            image_bytes=image_bytes, top_k=top_k, faiss_k=faiss_k
+        )
+        print(f"Queried {len(results)} results")
+
+        caps: List[BeerCap] = []
+
+        session = self.session_maker()
+        async with session:
             for cap_id in results.keys():
                 cap = await get_beer_cap_by_id(session, cap_id)
                 assert cap is not None, f"Cap with ID {cap_id} not found"

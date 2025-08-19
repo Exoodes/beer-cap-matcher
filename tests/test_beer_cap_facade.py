@@ -6,13 +6,18 @@ from unittest.mock import MagicMock
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.schemas.augmented_beer_cap.augmented_cap_create import AugmentedCapCreateSchema
+from src.api.schemas.augmented_beer_cap.augmented_cap_create import (
+    AugmentedCapCreateSchema,
+)
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.api.schemas.country.country_create import CountryCreateSchema
-from src.db.crud.augmented_cap_crud import get_all_augmented_caps, get_augmented_cap_by_id
+from src.db.crud.augmented_cap_crud import (
+    get_all_augmented_caps,
+    get_augmented_cap_by_id,
+)
 from src.db.crud.beer_brand_crud import create_beer_brand
-from src.db.crud.beer_cap_crud import get_all_beer_caps, get_beer_cap_by_id
-from src.db.crud.beer_crud import get_all_beers, get_beer_by_id
+from src.db.crud.beer_cap_crud import get_beer_cap_by_id
+from src.db.crud.beer_crud import get_beer_by_id
 from src.db.crud.country_crud import create_country
 from src.services.beer_cap_facade import BeerCapFacade
 from tests.conftest import TEST_IMAGE_CONTENT_TYPE, TEST_MINIO_ENDPOINT
@@ -32,12 +37,16 @@ class TestBeerCapFacade:
         async def fake_session_maker():
             yield db_session
 
-        facade = BeerCapFacade(minio_wrapper=mock_minio_client_wrapper, session_maker=fake_session_maker)
+        facade = BeerCapFacade(
+            minio_wrapper=mock_minio_client_wrapper, session_maker=fake_session_maker
+        )
 
         beer_brand = await create_beer_brand(db_session, "Facade Beer Brand")
         beer_name = "Facade Beer 1"
         cap_filename = "cap_facade_001.jpg"
-        cap_metadata = BeerCapCreateSchema(filename=cap_filename, collected_date=date.today())
+        cap_metadata = BeerCapCreateSchema(
+            filename=cap_filename, collected_date=date.today()
+        )
 
         dummy_image_file_like.seek(0)
 
@@ -83,7 +92,9 @@ class TestBeerCapFacade:
         async def fake_session_maker():
             yield db_session
 
-        facade = BeerCapFacade(minio_wrapper=mock_minio_client_wrapper, session_maker=fake_session_maker)
+        facade = BeerCapFacade(
+            minio_wrapper=mock_minio_client_wrapper, session_maker=fake_session_maker
+        )
 
         await create_beer_brand(db_session, "New Test Brand")
         await create_country(db_session, CountryCreateSchema(name="New Test Country"))
@@ -122,7 +133,9 @@ class TestBeerCapFacade:
         async def fake_session_maker():
             yield db_session
 
-        facade = BeerCapFacade(minio_wrapper=mock_minio_client_wrapper, session_maker=fake_session_maker)
+        facade = BeerCapFacade(
+            minio_wrapper=mock_minio_client_wrapper, session_maker=fake_session_maker
+        )
 
         beer_brand = await create_beer_brand(db_session, "Augmented Beer Brand")
         base_beer_cap = await facade.create_beer_with_cap_and_upload(
@@ -168,14 +181,22 @@ class TestBeerCapFacade:
         assert fetched_aug_cap.s3_key == aug_filename
         print(f"✅ test_add_augmented_cap_and_upload passed for {aug_filename}")
 
-    async def test_get_presigned_url_for_cap(self, mock_minio_client_wrapper: MagicMock):
+    async def test_get_presigned_url_for_cap(
+        self, mock_minio_client_wrapper: MagicMock
+    ):
         facade = BeerCapFacade(minio_wrapper=mock_minio_client_wrapper)
 
         original_s3_key = "original_cap_key_for_url.jpg"
-        expected_url_original = f"{TEST_MINIO_ENDPOINT}/{facade.original_caps_bucket}/{original_s3_key}"
-        mock_minio_client_wrapper.generate_presigned_url.return_value = expected_url_original
+        expected_url_original = (
+            f"{TEST_MINIO_ENDPOINT}/{facade.original_caps_bucket}/{original_s3_key}"
+        )
+        mock_minio_client_wrapper.generate_presigned_url.return_value = (
+            expected_url_original
+        )
 
-        presigned_url_original = facade.get_presigned_url_for_cap(original_s3_key, is_augmented=False)
+        presigned_url_original = facade.get_presigned_url_for_cap(
+            original_s3_key, is_augmented=False
+        )
 
         mock_minio_client_wrapper.generate_presigned_url.assert_called_once_with(
             facade.original_caps_bucket, original_s3_key
@@ -185,10 +206,16 @@ class TestBeerCapFacade:
         mock_minio_client_wrapper.generate_presigned_url.reset_mock()
 
         augmented_s3_key = "augmented_cap_key_for_url.jpg"
-        expected_url_augmented = f"{TEST_MINIO_ENDPOINT}/{facade.augmented_caps_bucket}/{augmented_s3_key}"
-        mock_minio_client_wrapper.generate_presigned_url.return_value = expected_url_augmented
+        expected_url_augmented = (
+            f"{TEST_MINIO_ENDPOINT}/{facade.augmented_caps_bucket}/{augmented_s3_key}"
+        )
+        mock_minio_client_wrapper.generate_presigned_url.return_value = (
+            expected_url_augmented
+        )
 
-        presigned_url_augmented = facade.get_presigned_url_for_cap(augmented_s3_key, is_augmented=True)
+        presigned_url_augmented = facade.get_presigned_url_for_cap(
+            augmented_s3_key, is_augmented=True
+        )
 
         mock_minio_client_wrapper.generate_presigned_url.assert_called_once_with(
             facade.augmented_caps_bucket, augmented_s3_key
@@ -208,9 +235,13 @@ class TestBeerCapFacade:
         async def fake_session_maker():
             yield db_session
 
-        facade = BeerCapFacade(minio_wrapper=mock_minio_client_wrapper, session_maker=fake_session_maker)
+        facade = BeerCapFacade(
+            minio_wrapper=mock_minio_client_wrapper, session_maker=fake_session_maker
+        )
 
-        beer_brand = await create_beer_brand(db_session, "Augmented Beer Brand for Delete")
+        beer_brand = await create_beer_brand(
+            db_session, "Augmented Beer Brand for Delete"
+        )
         base_beer_cap = await facade.create_beer_with_cap_and_upload(
             beer_name="Base Beer for Delete Aug",
             beer_brand_id=beer_brand.id,
@@ -240,7 +271,9 @@ class TestBeerCapFacade:
         await facade.delete_augmented_caps(base_cap_id)
 
         for aug_cap in aug_caps:
-            mock_minio_client_wrapper.delete_file.assert_any_call(facade.augmented_caps_bucket, aug_cap.s3_key)
+            mock_minio_client_wrapper.delete_file.assert_any_call(
+                facade.augmented_caps_bucket, aug_cap.s3_key
+            )
         assert mock_minio_client_wrapper.delete_file.call_count == len(aug_files)
 
         remaining_augs = await get_all_augmented_caps(db_session)
@@ -257,7 +290,9 @@ class TestBeerCapFacade:
         async def fake_session_maker():
             yield db_session
 
-        facade = BeerCapFacade(minio_wrapper=mock_minio_client_wrapper, session_maker=fake_session_maker)
+        facade = BeerCapFacade(
+            minio_wrapper=mock_minio_client_wrapper, session_maker=fake_session_maker
+        )
 
         beer_brand = await create_beer_brand(db_session, "Delete All Augs Brand")
         base_cap = await facade.create_beer_with_cap_and_upload(
@@ -288,8 +323,12 @@ class TestBeerCapFacade:
         deleted_count = await facade.delete_all_augmented_caps()
 
         assert deleted_count == 2
-        mock_minio_client_wrapper.delete_file.assert_any_call(facade.augmented_caps_bucket, "aug_1.jpg")
-        mock_minio_client_wrapper.delete_file.assert_any_call(facade.augmented_caps_bucket, "aug_2.jpg")
+        mock_minio_client_wrapper.delete_file.assert_any_call(
+            facade.augmented_caps_bucket, "aug_1.jpg"
+        )
+        mock_minio_client_wrapper.delete_file.assert_any_call(
+            facade.augmented_caps_bucket, "aug_2.jpg"
+        )
         all_augs = await get_all_augmented_caps(db_session)
         assert len(all_augs) == 0
 
@@ -304,7 +343,9 @@ class TestBeerCapFacade:
         async def fake_session_maker():
             yield db_session
 
-        facade = BeerCapFacade(minio_wrapper=mock_minio_client_wrapper, session_maker=fake_session_maker)
+        facade = BeerCapFacade(
+            minio_wrapper=mock_minio_client_wrapper, session_maker=fake_session_maker
+        )
 
         beer_brand = await create_beer_brand(db_session, "Beer Brand for Deletion")
         beer_name = "Beer to Delete"
@@ -340,9 +381,15 @@ class TestBeerCapFacade:
 
         expected_deleted_s3_keys = [main_cap_s3_key] + aug_s3_keys
         for s3_key in expected_deleted_s3_keys:
-            bucket = facade.augmented_caps_bucket if s3_key in aug_s3_keys else facade.original_caps_bucket
+            bucket = (
+                facade.augmented_caps_bucket
+                if s3_key in aug_s3_keys
+                else facade.original_caps_bucket
+            )
             mock_minio_client_wrapper.delete_file.assert_any_call(bucket, s3_key)
-        assert mock_minio_client_wrapper.delete_file.call_count == len(expected_deleted_s3_keys)
+        assert mock_minio_client_wrapper.delete_file.call_count == len(
+            expected_deleted_s3_keys
+        )
 
         deleted_main_cap = await get_beer_cap_by_id(db_session, main_cap_id)
         assert deleted_main_cap is None

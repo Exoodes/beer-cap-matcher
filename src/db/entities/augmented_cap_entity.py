@@ -1,8 +1,15 @@
-from sqlalchemy import Column, Float, ForeignKey, Integer, String
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional
+
+from sqlalchemy import Float, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.entities import Base
+
+if TYPE_CHECKING:
+    from .beer_cap_entity import BeerCap
 
 
 class AugmentedCap(Base):
@@ -14,13 +21,17 @@ class AugmentedCap(Base):
 
     __tablename__ = "augmented_caps"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
-    s3_key = Column(String, nullable=False, unique=True)
-    embedding_vector = Column(ARRAY(Float), nullable=True)
+    s3_key: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    embedding_vector: Mapped[Optional[list[float]]] = mapped_column(
+        ARRAY(Float), nullable=True
+    )
 
-    beer_cap_id = Column(Integer, ForeignKey("beer_caps.id", ondelete="CASCADE"), nullable=False)
-    beer_cap = relationship("BeerCap", back_populates="augmented_caps")
+    beer_cap_id: Mapped[int] = mapped_column(
+        ForeignKey("beer_caps.id", ondelete="CASCADE"), nullable=False
+    )
+    beer_cap: Mapped["BeerCap"] = relationship(back_populates="augmented_caps")
 
     def __repr__(self) -> str:
         return (

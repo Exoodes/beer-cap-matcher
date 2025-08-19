@@ -1,7 +1,7 @@
 import pickle
 from typing import List
 
-import faiss
+import faiss  # type: ignore[import-untyped]
 import numpy as np
 
 from src.utils.logger import get_logger
@@ -10,7 +10,9 @@ logger = get_logger(__name__)
 
 
 class IndexBuilder:
-    def build_index(self, embeddings: List[List[float]], metadata: List[int]) -> tuple[faiss.IndexFlatIP, bytes]:
+    def build_index(
+        self, embeddings: List[List[float]], metadata: List[int]
+    ) -> tuple[faiss.IndexFlatIP, bytes]:
         """
         Build a FAISS index from in-memory data.
 

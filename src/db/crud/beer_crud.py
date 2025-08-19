@@ -16,7 +16,9 @@ async def create_beer(
     country_id: Optional[int] = None,
     commit: bool = True,
 ) -> Beer:
-    beer = Beer(name=name, rating=rating, beer_brand_id=beer_brand_id, country_id=country_id)
+    beer = Beer(
+        name=name, rating=rating, beer_brand_id=beer_brand_id, country_id=country_id
+    )
     session.add(beer)
 
     if commit:
@@ -62,7 +64,7 @@ async def get_all_beers(
         stmt = stmt.options(selectinload(Beer.country))
 
     result = await session.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 async def delete_beer(session: AsyncSession, beer_id: int) -> bool:

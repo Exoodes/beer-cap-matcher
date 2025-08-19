@@ -4,7 +4,10 @@ from typing import List
 from fastapi import APIRouter, Depends, Form, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.constants.responses import INTERNAL_SERVER_ERROR_RESPONSE, NOT_FOUND_RESPONSE
+from src.api.constants.responses import (
+    INTERNAL_SERVER_ERROR_RESPONSE,
+    NOT_FOUND_RESPONSE,
+)
 from src.api.dependencies.db import get_db_session
 from src.api.schemas.beer.beer_response_base import BeerResponseBase
 from src.api.schemas.country.country_create import CountryCreateSchema
@@ -34,7 +37,9 @@ async def create_country_endpoint(
     description: str = Form(..., description="Description of the country"),
     db: AsyncSession = Depends(get_db_session),
 ) -> CountryResponseWithBeers:
-    country = await create_country(db, CountryCreateSchema(name=name, description=description))
+    country = await create_country(
+        db, CountryCreateSchema(name=name, description=description)
+    )
     return CountryResponseWithBeers(
         id=country.id,
         name=country.name,
@@ -58,7 +63,14 @@ async def get_all_countries_endpoint(
             id=country.id,
             name=country.name,
             description=country.description,
-            beers=[BeerResponseBase(id=beer.id, name=beer.name) for beer in country.beers] if include_beers else None,
+            beers=(
+                [
+                    BeerResponseBase(id=beer.id, name=beer.name, rating=beer.rating)
+                    for beer in country.beers
+                ]
+                if include_beers
+                else None
+            ),
         )
         for country in countries
     ]
@@ -78,8 +90,17 @@ async def get_country_by_id_endpoint(
     if not country:
         raise HTTPException(status_code=404, detail="Country not found.")
 
-    beers = [BeerResponseBase(id=beer.id, name=beer.name) for beer in country.beers] if include_beers else None
-    return CountryResponseWithBeers(id=country.id, name=country.name, description=country.description, beers=beers)
+    beers = (
+        [
+            BeerResponseBase(id=beer.id, name=beer.name, rating=beer.rating)
+            for beer in country.beers
+        ]
+        if include_beers
+        else None
+    )
+    return CountryResponseWithBeers(
+        id=country.id, name=country.name, description=country.description, beers=beers
+    )
 
 
 @router.delete(
@@ -95,7 +116,9 @@ async def delete_country_endpoint(
     if not country:
         raise HTTPException(status_code=404, detail="Country not found.")
     await delete_country(db, country_id)
-    return CountryResponseBase(id=country.id, name=country.name, description=country.description)
+    return CountryResponseBase(
+        id=country.id, name=country.name, description=country.description
+    )
 
 
 @router.patch(
@@ -115,5 +138,8 @@ async def update_country_endpoint(
         id=updated_country.id,
         name=updated_country.name,
         description=updated_country.description,
-        beers=[BeerResponseBase(id=beer.id, name=beer.name) for beer in updated_country.beers],
+        beers=[
+            BeerResponseBase(id=beer.id, name=beer.name, rating=beer.rating)
+            for beer in updated_country.beers
+        ],
     )

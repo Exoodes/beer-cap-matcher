@@ -7,4 +7,6 @@ class StatusResponse(BaseModel):
     """
 
     success: bool = Field(..., description="True if the operation was successful")
-    message: str = Field(..., description="Human-readable message about the operation result")
+    message: str = Field(
+        ..., description="Human-readable message about the operation result"
+    )
