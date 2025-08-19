@@ -7,17 +7,17 @@ from pydantic import BaseModel, ConfigDict, Field
 class QueryResultResponse(BaseModel):
     """
     Summary of similarity query results for a single beer cap match.
-    Contains distance metrics and match count.
+    Contains similarity metrics and match count.
     """
 
-    mean_distance: float = Field(
-        ..., description="Average embedding distance to the query"
+    mean_similarity: float = Field(
+        ..., description="Average embedding similarity to the query"
     )
-    min_distance: float = Field(
-        ..., description="Minimum embedding distance to the query"
+    min_similarity: float = Field(
+        ..., description="Minimum embedding similarity to the query"
     )
-    max_distance: float = Field(
-        ..., description="Maximum embedding distance to the query"
+    max_similarity: float = Field(
+        ..., description="Maximum embedding similarity to the query"
     )
     match_count: int = Field(
         ..., description="Number of matched augmented caps for this beer cap"

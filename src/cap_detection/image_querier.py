@@ -18,16 +18,18 @@ logger = get_logger(__name__)
 
 @dataclass
 class AggregatedResult:
+    """Aggregated similarity metrics for a beer cap match."""
+
     match_count: int
-    mean_distance: float
-    min_distance: float
-    max_distance: float
+    mean_similarity: float
+    min_similarity: float
+    max_similarity: float
 
 
 @dataclass
 class _Agg:
     count: int = 0
-    distances: List[float] = field(default_factory=list)
+    similarities: List[float] = field(default_factory=list)
 
 
 class ImageQuerier:
@@ -67,7 +69,7 @@ class ImageQuerier:
         top_k_items = dict(
             sorted(
                 full_results.items(),
-                key=lambda item: item[1].mean_distance,
+                key=lambda item: item[1].mean_similarity,
                 reverse=True,
             )[:top_k]
         )
@@ -96,10 +98,10 @@ class ImageQuerier:
             embedding = self.model.encode_image(image_tensor).cpu().numpy()
             faiss.normalize_L2(embedding)
 
-        distances, indices = self.index.search(embedding, top_k)
+        similarities, indices = self.index.search(embedding, top_k)
         results = [
-            (self.metadata[idx], float(dist))
-            for idx, dist in zip(indices[0], distances[0])
+            (self.metadata[idx], float(sim))
+            for idx, sim in zip(indices[0], similarities[0])
         ]
         return results
 
@@ -108,24 +110,24 @@ class ImageQuerier:
     ) -> Dict[int, AggregatedResult]:
         aggregation: Dict[int, _Agg] = defaultdict(_Agg)
 
-        for matched_augmented_cap_id, distance in results:
+        for matched_augmented_cap_id, similarity in results:
             cap_id = self.augmented_cap_to_cap.get(str(matched_augmented_cap_id))
             if cap_id is None:
                 continue
 
             aggregation[cap_id].count += 1
-            aggregation[cap_id].distances.append(distance)
+            aggregation[cap_id].similarities.append(similarity)
 
         aggregated_results: Dict[int, AggregatedResult] = {}
         for cap_id, data in aggregation.items():
-            mean_distance = float(np.mean(data.distances))
-            min_distance = float(np.min(data.distances))
-            max_distance = float(np.max(data.distances))
+            mean_similarity = float(np.mean(data.similarities))
+            min_similarity = float(np.min(data.similarities))
+            max_similarity = float(np.max(data.similarities))
             aggregated_results[cap_id] = AggregatedResult(
                 match_count=data.count,
-                mean_distance=mean_distance,
-                min_distance=min_distance,
-                max_distance=max_distance,
+                mean_similarity=mean_similarity,
+                min_similarity=min_similarity,
+                max_similarity=max_similarity,
             )
 
         return aggregated_results
