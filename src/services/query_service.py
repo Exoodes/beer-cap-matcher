@@ -13,6 +13,9 @@ from src.db.crud.beer_cap_crud import get_beer_cap_by_id
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
 from src.db.entities.beer_cap_entity import BeerCap
 from src.storage.minio.minio_client import MinioClientWrapper
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class QueryService:
@@ -28,7 +31,7 @@ class QueryService:
 
         self.index_file_name = settings.minio_index_file_name
         self.metadata_file_name = settings.minio_metadata_file_name
-        self.index_bucket = settings.minio_augmented_caps_bucket
+        self.index_bucket = settings.minio_index_bucket
         self.u2net_model_path = settings.u2net_model_path
 
         self.index: Any | None = None
@@ -90,7 +93,7 @@ class QueryService:
         results = self.querier.query(
             image_bytes=image_bytes, top_k=top_k, faiss_k=faiss_k
         )
-        print(f"Queried {len(results)} results")
+        logger.debug("Queried %d results", len(results))
 
         caps: List[BeerCap] = []
 
