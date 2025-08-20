@@ -1,5 +1,5 @@
 import logging
-from typing import Annotated, List, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -93,7 +93,7 @@ async def generate_index(
 
 @router.get(
     "/",
-    response_model=List[AugmentedBeerCapResponse],
+    response_model=list[AugmentedBeerCapResponse],
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def get_all_beer_caps(
@@ -101,7 +101,7 @@ async def get_all_beer_caps(
     include_embedding_vector: bool = Query(
         False, description="Include embedding vector in response"
     ),
-) -> List[AugmentedBeerCapResponse]:
+) -> list[AugmentedBeerCapResponse]:
     """
     Retrieve all augmented beer caps.
     """

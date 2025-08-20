@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,13 +47,13 @@ async def create_beer_brand_endpoint(
 
 @router.get(
     "/",
-    response_model=List[BeerBrandResponseWithBeers],
+    response_model=list[BeerBrandResponseWithBeers],
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def get_all_beer_brands_endpoint(
     include_beers: bool = Query(False, description="Include beers for each beer_brand"),
     db: AsyncSession = Depends(get_db_session),
-) -> List[BeerBrandResponseWithBeers]:
+) -> list[BeerBrandResponseWithBeers]:
     beer_brands = await get_all_beer_brands(db, load_beers=include_beers)
     return [
         BeerBrandResponseWithBeers(

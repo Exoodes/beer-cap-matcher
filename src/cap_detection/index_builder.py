@@ -1,5 +1,4 @@
 import pickle
-from typing import List
 
 import faiss  # type: ignore[import-untyped]
 import numpy as np
@@ -13,7 +12,7 @@ class IndexBuilder:
     """Create and serialize FAISS indexes for cap embeddings."""
 
     def build_index(
-        self, embeddings: List[List[float]], metadata: List[int]
+        self, embeddings: list[list[float]], metadata: list[int]
     ) -> tuple[faiss.IndexFlatIP, bytes]:
         """
         Build a FAISS index from in-memory data.

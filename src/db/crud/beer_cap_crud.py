@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,7 +55,7 @@ async def get_beer_caps_by_beer_id(
     beer_id: int,
     load_augmented_caps: bool = False,
     load_beer: bool = False,
-) -> List[BeerCap]:
+) -> list[BeerCap]:
     stmt = select(BeerCap).where(BeerCap.beer_id == beer_id)
 
     if load_augmented_caps:
@@ -71,7 +71,7 @@ async def get_all_beer_caps(
     session: AsyncSession,
     load_augmented_caps: bool = False,
     load_beer: bool = False,
-) -> List[BeerCap]:
+) -> list[BeerCap]:
     stmt = select(BeerCap)
 
     if load_augmented_caps:

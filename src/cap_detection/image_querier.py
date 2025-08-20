@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import faiss  # type: ignore[import-untyped]
 import numpy as np
@@ -29,7 +29,7 @@ class AggregatedResult:
 @dataclass
 class _Agg:
     count: int = 0
-    similarities: List[float] = field(default_factory=list)
+    similarities: list[float] = field(default_factory=list)
 
 
 class ImageQuerier:
@@ -38,10 +38,10 @@ class ImageQuerier:
     def __init__(
         self,
         index: faiss.Index,
-        metadata: List[int],
-        augmented_cap_to_cap: Dict[str, int],
+        metadata: list[int],
+        augmented_cap_to_cap: dict[str, int],
         u2net_model_path: str,
-        image_size: Tuple[int, int] = (224, 224),
+        image_size: tuple[int, int] = (224, 224),
     ):
         """Initialise the querier with an index and preprocessing tools.
 
@@ -69,7 +69,7 @@ class ImageQuerier:
         image_bytes: Optional[bytes] = None,
         top_k: int = 3,
         faiss_k: int = 10000,
-    ) -> Dict[int, AggregatedResult]:
+    ) -> dict[int, AggregatedResult]:
         """Run a nearest-neighbour search for a cap image.
 
         Args:
@@ -117,7 +117,7 @@ class ImageQuerier:
 
     def _query_embedding(
         self, image_tensor: torch.Tensor, top_k: int
-    ) -> List[Tuple[int, float]]:
+    ) -> list[tuple[int, float]]:
         top_k = min(top_k, self.index.ntotal)
         with torch.no_grad():
             embedding = self.model.encode_image(image_tensor).cpu().numpy()
@@ -131,9 +131,9 @@ class ImageQuerier:
         return results
 
     def _aggregate_results(
-        self, results: List[Tuple[int, float]]
-    ) -> Dict[int, AggregatedResult]:
-        aggregation: Dict[int, _Agg] = defaultdict(_Agg)
+        self, results: list[tuple[int, float]]
+    ) -> dict[int, AggregatedResult]:
+        aggregation: dict[int, _Agg] = defaultdict(_Agg)
 
         for matched_augmented_cap_id, similarity in results:
             cap_id = self.augmented_cap_to_cap.get(str(matched_augmented_cap_id))
@@ -143,7 +143,7 @@ class ImageQuerier:
             aggregation[cap_id].count += 1
             aggregation[cap_id].similarities.append(similarity)
 
-        aggregated_results: Dict[int, AggregatedResult] = {}
+        aggregated_results: dict[int, AggregatedResult] = {}
         for cap_id, data in aggregation.items():
             mean_similarity = float(np.mean(data.similarities))
             min_similarity = float(np.min(data.similarities))

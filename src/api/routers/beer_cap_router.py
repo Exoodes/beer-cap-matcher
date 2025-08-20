@@ -1,7 +1,7 @@
 import io
 import logging
 from datetime import date
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -99,13 +99,13 @@ async def create_cap_endpoint(
 
 @router.get(
     "/",
-    response_model=List[BeerCapResponseWithUrl],
+    response_model=list[BeerCapResponseWithUrl],
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def api_get_all_beer_caps(
     beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
     db: AsyncSession = Depends(get_db_session),
-) -> List[BeerCapResponseWithUrl]:
+) -> list[BeerCapResponseWithUrl]:
     """
     Retrieve all beer caps with their presigned URLs.
     """
@@ -116,14 +116,14 @@ async def api_get_all_beer_caps(
 
 @router.get(
     "/by-beer/{beer_id}/",
-    response_model=List[BeerCapResponseWithUrl],
+    response_model=list[BeerCapResponseWithUrl],
     responses={**NOT_FOUND_RESPONSE, **INTERNAL_SERVER_ERROR_RESPONSE},
 )
 async def get_all_caps_from_beer(
     beer_id: int,
     beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
     db: AsyncSession = Depends(get_db_session),
-) -> List[BeerCapResponseWithUrl]:
+) -> list[BeerCapResponseWithUrl]:
     """
     Retrieve all beer caps for a specific beer ID.
     """

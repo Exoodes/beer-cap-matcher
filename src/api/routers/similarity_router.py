@@ -1,6 +1,6 @@
 import logging
 from datetime import date
-from typing import Annotated, Any, List, Mapping, Optional, cast
+from typing import Annotated, Any, Mapping, Optional, cast
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/similarity", tags=["Similarity"])
 
 @router.post(
     "/query-image",
-    response_model=List[BeerCapResponseWithQueryResult],
+    response_model=list[BeerCapResponseWithQueryResult],
     responses={
         **BAD_REQUEST_RESPONSE,
         **cast(Mapping[int | str, dict[str, Any]], INTERNAL_SERVER_ERROR_RESPONSE),
@@ -37,7 +37,7 @@ async def query_image(
     faiss_k: int = Query(
         10000, gt=0, description="Number of FAISS candidates to search"
     ),
-) -> List[BeerCapResponseWithQueryResult]:
+) -> list[BeerCapResponseWithQueryResult]:
     """
     Query the most similar beer caps to the uploaded image.
     """

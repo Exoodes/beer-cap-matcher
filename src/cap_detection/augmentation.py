@@ -1,10 +1,8 @@
-from typing import Tuple
-
 import albumentations as A  # type: ignore[import-untyped]
 from PIL import Image, ImageChops
 
 
-def get_augmentation_pipeline(image_size: Tuple[int, int] = (224, 224)) -> A.Compose:
+def get_augmentation_pipeline(image_size: tuple[int, int] = (224, 224)) -> A.Compose:
     """Create the albumentations pipeline used for cap images.
 
     Args:

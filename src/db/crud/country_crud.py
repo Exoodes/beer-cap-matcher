@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,7 +47,7 @@ async def get_country_by_name(session: AsyncSession, name: str) -> Optional[Coun
 async def get_all_countries(
     session: AsyncSession,
     load_beers: bool = False,
-) -> List[Country]:
+) -> list[Country]:
     stmt = select(Country)
 
     if load_beers:

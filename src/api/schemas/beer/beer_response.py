@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import Field
 
@@ -11,6 +11,6 @@ class BeerResponseWithCaps(BeerResponseBase):
     Extended response schema for a beer entity that includes a list of its caps.
     """
 
-    caps: Optional[List[BeerCapResponseBase]] = Field(
+    caps: Optional[list[BeerCapResponseBase]] = Field(
         default=None, description="List of caps associated with this beer"
     )

@@ -1,5 +1,5 @@
 import io
-from typing import Any, Callable, Dict, Iterable, List, Tuple
+from typing import Any, Callable, Iterable
 
 import numpy as np
 import torch
@@ -14,7 +14,7 @@ logger = get_logger(__name__)
 class EmbeddingGenerator:
     """Generate CLIP embeddings for images provided as bytes."""
 
-    def __init__(self, image_size: Tuple[int, int] = (224, 224)) -> None:
+    def __init__(self, image_size: tuple[int, int] = (224, 224)) -> None:
         self.device: str = "cuda" if torch.cuda.is_available() else "cpu"
         self.model: Any
         self.preprocess: Callable[[Image.Image], torch.Tensor]
@@ -23,10 +23,10 @@ class EmbeddingGenerator:
         self.image_size = image_size
 
     def generate_embeddings_from_bytes(
-        self, images: Iterable[Tuple[str, bytes]]
-    ) -> Dict[str, torch.Tensor]:
+        self, images: Iterable[tuple[str, bytes]]
+    ) -> dict[str, torch.Tensor]:
         """Generate embeddings directly from image bytes."""
-        result: Dict[str, torch.Tensor] = {}
+        result: dict[str, torch.Tensor] = {}
 
         for filename, data in images:
             try:

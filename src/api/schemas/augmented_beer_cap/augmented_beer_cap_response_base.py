@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -10,7 +10,7 @@ class AugmentedBeerCapResponseBase(BaseModel):
     """
 
     id: int = Field(..., description="ID of the augmented beer cap")
-    embedding_vector: Optional[List[float]] = Field(
+    embedding_vector: Optional[list[float]] = Field(
         default=None, description="Embedding vector representing the image features"
     )
 

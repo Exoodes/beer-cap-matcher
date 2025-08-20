@@ -1,5 +1,5 @@
 import logging
-from typing import Annotated, List
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,14 +60,14 @@ async def create_beer_endpoint(
 
 @router.get(
     "/",
-    response_model=List[BeerResponseWithCaps],
+    response_model=list[BeerResponseWithCaps],
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def get_all_beers_endpoint(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     include_caps: bool = Query(False, description="Include caps for each beer"),
     include_country: bool = Query(False, description="Include country for each beer"),
-) -> List[BeerResponseWithCaps]:
+) -> list[BeerResponseWithCaps]:
     beers = await get_all_beers(
         db, load_caps=include_caps, load_country=include_country
     )
