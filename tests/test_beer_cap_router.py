@@ -1,217 +1,206 @@
-import importlib.util
-import sys
-import types
+import importlib
+import io
+from datetime import date
+from typing import Optional, cast
 
 import pytest
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
-# Minimal dependency modules
-dependencies_pkg = types.ModuleType("src.api.dependencies")
-dependencies_pkg.__path__ = []
-sys.modules.setdefault("src.api.dependencies", dependencies_pkg)
-
-db_module = types.ModuleType("src.api.dependencies.db")
+beer_cap_router = importlib.import_module("src.api.routers.beer_cap_router")
 
 
-async def dummy_get_db_session():
-    pass
-
-
-db_module.get_db_session = dummy_get_db_session
-sys.modules["src.api.dependencies.db"] = db_module
-
-facades_module = types.ModuleType("src.api.dependencies.facades")
-
-
-def dummy_get_beer_cap_facade():
-    pass
-
-
-facades_module.get_beer_cap_facade = dummy_get_beer_cap_facade
-sys.modules["src.api.dependencies.facades"] = facades_module
-
-services_pkg = types.ModuleType("src.services")
-services_pkg.__path__ = []
-sys.modules.setdefault("src.services", services_pkg)
-
-beer_cap_facade_module = types.ModuleType("src.services.beer_cap_facade")
-
-
-class BeerCapFacade:
-    pass
-
-
-beer_cap_facade_module.BeerCapFacade = BeerCapFacade
-sys.modules["src.services.beer_cap_facade"] = beer_cap_facade_module
-
-spec = importlib.util.spec_from_file_location(
-    "beer_cap_router", "src/api/routers/beer_cap_router.py"
-)
-beer_cap_router_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(beer_cap_router_module)
-beer_cap_router = beer_cap_router_module.router
-from src.api.dependencies.db import get_db_session
-from src.api.dependencies.facades import get_beer_cap_facade
-
-
-class DummyBeer:
-    def __init__(self, id: int = 1, name: str = "Beer", rating: int = 5):
+class _Beer:
+    def __init__(self, id: int, name: str, rating: Optional[float] = None):
         self.id = id
         self.name = name
         self.rating = rating
 
 
-class DummyBeerCap:
+class _BeerCap:
     def __init__(
-        self, id: int = 1, variant_name: str = "Variant", beer: DummyBeer | None = None
+        self,
+        id: int,
+        filename: str = "cap.jpg",
+        variant_name: Optional[str] = None,
+        collected_date: Optional[date] = None,
+        beer: Optional[_Beer] = None,
+        storage_key: str = "caps/cap.jpg",
     ):
         self.id = id
+        self.filename = filename
         self.variant_name = variant_name
-        self.collected_date = None
-        self.s3_key = "key"
-        self.beer = beer or DummyBeer()
+        self.collected_date = collected_date
+        self.beer = beer or _Beer(1, "Lager", rating=4.0)
         self.beer_id = self.beer.id
+        self.s3_key = storage_key
 
 
-@pytest.fixture()
-def client():
+class _DummyFacade:
+    def __init__(self):
+        self._delete_ok = True
+
+    async def create_cap_and_related_entities(
+        self, cap_metadata, image_data, image_length, content_type
+    ):
+        return _BeerCap(
+            id=1,
+            filename=cap_metadata.filename,
+            variant_name=cap_metadata.variant_name,
+            collected_date=cap_metadata.collected_date,
+            beer=_Beer(1, cap_metadata.beer_name or "BeerX", rating=4.0),
+            storage_key="caps/1.jpg",
+        )
+
+    def get_presigned_url_for_cap(self, storage_key: str) -> str:
+        return f"https://example.test/{storage_key}"
+
+    async def delete_beer_cap_and_its_augmented_caps(self, beer_cap_id: int) -> bool:
+        return self._delete_ok
+
+
+@pytest.fixture
+def client(db_session):
+    from src.api.dependencies.db import get_db_session
+    from src.api.dependencies.facades import get_beer_cap_facade
+
     app = FastAPI()
-    app.include_router(beer_cap_router)
+    app.include_router(beer_cap_router.router)
 
-    async def override_db():
-        yield None
+    dummy = _DummyFacade()
+    app.dependency_overrides[get_db_session] = lambda: db_session
+    app.dependency_overrides[get_beer_cap_facade] = lambda: dummy
 
-    app.dependency_overrides[get_db_session] = override_db
-    return TestClient(app)
-
-
-def test_create_beer_cap_success(client):
-    class Facade:
-        async def create_cap_and_related_entities(
-            self, cap_metadata, image_data, image_length, content_type
-        ):
-            return DummyBeerCap()
-
-        def get_presigned_url_for_cap(self, s3_key):
-            return "http://example.com/cap.jpg"
-
-    client.app.dependency_overrides[get_beer_cap_facade] = lambda: Facade()
-
-    files = {"file": ("cap.jpg", b"fake", "image/jpeg")}
-    data = {"beer_id": "1"}
-    response = client.post("/beer_caps/", files=files, data=data)
-    assert response.status_code == 200
-    assert response.json()["beer"]["id"] == 1
+    with TestClient(app) as c:
+        yield c
 
 
-def test_get_all_beer_caps_success(client, monkeypatch):
-    async def mock_get_all_beer_caps(db, load_beer=True):
-        return [DummyBeerCap()]
-
-    monkeypatch.setattr(
-        beer_cap_router_module, "get_all_beer_caps", mock_get_all_beer_caps
-    )
-
-    class Facade:
-        def get_presigned_url_for_cap(self, s3_key):
-            return "http://example.com/cap.jpg"
-
-    client.app.dependency_overrides[get_beer_cap_facade] = lambda: Facade()
-
-    response = client.get("/beer_caps/")
-    assert response.status_code == 200
-    assert len(response.json()) == 1
+def test_create_cap_success(client: TestClient) -> None:
+    files = {"file": ("cap.jpg", b"\xff\xd8\xff\x00", "image/jpeg")}
+    data = {
+        "variant_name": "Gold Rim",
+        "beer_name": "Test Beer",
+        "beer_brand_id": "10",
+        "beer_brand_name": "BrandX",
+    }
+    resp = client.post("/beer_caps/", files=files, data=data)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["id"] == 1
+    assert body["beer"]["name"] in ("Test Beer", "BeerX")
+    assert body["presigned_url"].startswith("https://")
 
 
-def test_get_beer_cap_success(client, monkeypatch):
-    async def mock_get_beer_cap_by_id(db, beer_cap_id, load_beer=True):
-        return DummyBeerCap(id=beer_cap_id)
-
-    monkeypatch.setattr(
-        beer_cap_router_module, "get_beer_cap_by_id", mock_get_beer_cap_by_id
-    )
-
-    class Facade:
-        def get_presigned_url_for_cap(self, s3_key):
-            return "http://example.com/cap.jpg"
-
-    client.app.dependency_overrides[get_beer_cap_facade] = lambda: Facade()
-
-    response = client.get("/beer_caps/1/")
-    assert response.status_code == 200
-    assert response.json()["id"] == 1
+def test_create_cap_invalid_file_type(client: TestClient) -> None:
+    files = {"file": ("not-image.txt", b"hello", "text/plain")}
+    resp = client.post("/beer_caps/", files=files, data={})
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "Invalid file type. Only images are allowed."
 
 
-def test_get_beer_cap_not_found(client, monkeypatch):
-    async def mock_get_beer_cap_by_id(db, beer_cap_id, load_beer=True):
+def test_list_caps(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def mock_get_all(db, load_beer: bool = True):
+        return [_BeerCap(id=1, variant_name="A"), _BeerCap(id=2, variant_name="B")]
+
+    monkeypatch.setattr(beer_cap_router, "get_all_beer_caps", mock_get_all)
+
+    resp = client.get("/beer_caps/")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 2
+
+
+def test_get_caps_by_beer_found(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def mock_get_by_beer(db, beer_id: int, load_beer: bool = True):
+        return [_BeerCap(id=5, beer=_Beer(123, "Found", rating=4.0))]
+
+    monkeypatch.setattr(beer_cap_router, "get_beer_caps_by_beer_id", mock_get_by_beer)
+    resp = client.get("/beer_caps/by-beer/123/")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data[0]["beer"]["id"] == 123
+
+
+def test_get_caps_by_beer_not_found(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def mock_get_by_beer(db, beer_id: int, load_beer: bool = True):
+        return []
+
+    monkeypatch.setattr(beer_cap_router, "get_beer_caps_by_beer_id", mock_get_by_beer)
+    resp = client.get("/beer_caps/by-beer/999/")
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "No beer caps found for this beer."
+
+
+def test_get_cap_by_id_found(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def mock_get_by_id(db, cap_id: int, load_beer: bool = True):
+        return _BeerCap(id=42, beer=_Beer(9, "X", rating=4.0))
+
+    monkeypatch.setattr(beer_cap_router, "get_beer_cap_by_id", mock_get_by_id)
+    resp = client.get("/beer_caps/42/")
+    assert resp.status_code == 200
+    assert resp.json()["id"] == 42
+
+
+def test_get_cap_by_id_not_found(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def mock_get_by_id(db, cap_id: int, load_beer: bool = True):
         return None
 
-    monkeypatch.setattr(
-        beer_cap_router_module, "get_beer_cap_by_id", mock_get_beer_cap_by_id
-    )
-
-    class Facade:
-        def get_presigned_url_for_cap(self, s3_key):
-            return "http://example.com/cap.jpg"
-
-    client.app.dependency_overrides[get_beer_cap_facade] = lambda: Facade()
-
-    response = client.get("/beer_caps/1/")
-    assert response.status_code == 404
+    monkeypatch.setattr(beer_cap_router, "get_beer_cap_by_id", mock_get_by_id)
+    resp = client.get("/beer_caps/404/")
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "Beer cap not found."
 
 
-def test_update_beer_cap_success(client, monkeypatch):
-    async def mock_update_beer_cap(db, beer_cap_id, update_data, load_beer=True):
-        return DummyBeerCap(id=beer_cap_id, variant_name="Updated")
+def test_update_cap_success(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def mock_update(db, cap_id: int, update_data, load_beer: bool = True):
+        return _BeerCap(id=7, variant_name=update_data.variant_name)
 
-    monkeypatch.setattr(beer_cap_router_module, "update_beer_cap", mock_update_beer_cap)
-
-    class Facade:
-        def get_presigned_url_for_cap(self, s3_key):
-            return "http://example.com/cap.jpg"
-
-    client.app.dependency_overrides[get_beer_cap_facade] = lambda: Facade()
-
-    response = client.patch("/beer_caps/1/", json={"variant_name": "Updated"})
-    assert response.status_code == 200
-    assert response.json()["variant_name"] == "Updated"
+    monkeypatch.setattr(beer_cap_router, "update_beer_cap", mock_update)
+    resp = client.patch("/beer_caps/7/", json={"variant_name": "New Variant"})
+    assert resp.status_code == 200
+    assert resp.json()["variant_name"] == "New Variant"
 
 
-def test_update_beer_cap_not_found(client, monkeypatch):
-    async def mock_update_beer_cap(db, beer_cap_id, update_data, load_beer=True):
+def test_update_cap_not_found(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def mock_update(db, cap_id: int, update_data, load_beer: bool = True):
         return None
 
-    monkeypatch.setattr(beer_cap_router_module, "update_beer_cap", mock_update_beer_cap)
-
-    class Facade:
-        def get_presigned_url_for_cap(self, s3_key):
-            return "http://example.com/cap.jpg"
-
-    client.app.dependency_overrides[get_beer_cap_facade] = lambda: Facade()
-
-    response = client.patch("/beer_caps/1/", json={"variant_name": "Updated"})
-    assert response.status_code == 404
+    monkeypatch.setattr(beer_cap_router, "update_beer_cap", mock_update)
+    resp = client.patch("/beer_caps/8888/", json={"variant_name": "X"})
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "Beer cap not found."
 
 
-def test_delete_beer_cap_success(client):
-    class Facade:
-        async def delete_beer_cap_and_its_augmented_caps(self, cap_id):
-            return True
-
-    client.app.dependency_overrides[get_beer_cap_facade] = lambda: Facade()
-
-    response = client.delete("/beer_caps/1/")
-    assert response.status_code == 200
-    assert response.json()["success"] is True
+def test_delete_cap_success(client: TestClient) -> None:
+    resp = client.delete("/beer_caps/9/")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success"] is True
 
 
-def test_delete_beer_cap_not_found(client):
-    class Facade:
-        async def delete_beer_cap_and_its_augmented_caps(self, cap_id):
-            return False
+def test_delete_cap_not_found(client: TestClient) -> None:
+    from src.api.dependencies.facades import get_beer_cap_facade
 
-    client.app.dependency_overrides[get_beer_cap_facade] = lambda: Facade()
+    app = client.app
+    not_found = _DummyFacade()
+    not_found._delete_ok = False
+    app.dependency_overrides[get_beer_cap_facade] = lambda: not_found
+    try:
+        resp = client.delete("/beer_caps/404/")
+    finally:
+        app.dependency_overrides.pop(get_beer_cap_facade, None)
 
-    response = client.delete("/beer_caps/1/")
-    assert response.status_code == 404
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "Beer cap not found."

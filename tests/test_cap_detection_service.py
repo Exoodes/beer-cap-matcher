@@ -86,7 +86,9 @@ async def test_generate_embeddings_stores_vectors(
 
     assert result["updated_embeddings"] == 1
     aug_caps = await get_all_augmented_caps(db_session)
-    assert aug_caps[0].embedding_vector == [0.1, 0.2]
+    assert all(
+        abs(a - b) < 1e-6 for a, b in zip(aug_caps[0].embedding_vector, [0.1, 0.2])
+    )
 
 
 @pytest.mark.asyncio

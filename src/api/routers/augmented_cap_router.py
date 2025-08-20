@@ -96,7 +96,7 @@ async def generate_index(
     response_model=list[AugmentedBeerCapResponse],
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
-async def get_all_beer_caps(
+async def get_all_augmented_beer_caps(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     include_embedding_vector: bool = Query(
         False, description="Include embedding vector in response"

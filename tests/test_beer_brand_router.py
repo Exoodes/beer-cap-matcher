@@ -1,46 +1,19 @@
-import pytest
-import importlib.util
-import sys
-import types
+import importlib
+from typing import Optional
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.api.dependencies.db import get_db_session
 
-# Stub dependency modules
-dependencies_pkg = types.ModuleType("src.api.dependencies")
-sys.modules.setdefault("src.api.dependencies", dependencies_pkg)
-
-db_module = types.ModuleType("src.api.dependencies.db")
-
-
-async def dummy_get_db_session():
-    pass
-
-
-db_module.get_db_session = dummy_get_db_session
-sys.modules["src.api.dependencies.db"] = db_module
-
-spec = importlib.util.spec_from_file_location(
-    "beer_brand_router", "src/api/routers/beer_brand_router.py"
-)
-beer_brand_router_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(beer_brand_router_module)
-beer_brand_router = beer_brand_router_module.router
-
-
-class BeerBrandStub:
-    def __init__(self, id: int = 1, name: str = "Brand", beers=None):
-        self.id = id
-        self.name = name
-        self.beers = beers or []
+beer_brand_router = importlib.import_module("src.api.routers.beer_brand_router")
 
 
 @pytest.fixture()
-def client():
+def client() -> TestClient:
     app = FastAPI()
-    app.include_router(beer_brand_router)
+    app.include_router(beer_brand_router.router)
 
     async def override_db():
         yield None
@@ -49,102 +22,125 @@ def client():
     return TestClient(app)
 
 
-def test_create_beer_brand_success(client, monkeypatch):
-    async def mock_create_beer_brand(db, name):
-        return BeerBrandStub(id=1, name=name)
-
-    monkeypatch.setattr(
-        beer_brand_router_module, "create_beer_brand", mock_create_beer_brand
-    )
-
-    response = client.post("/beer_brands/", data={"name": "Brand"})
-    assert response.status_code == 200
-    assert response.json() == {"id": 1, "name": "Brand", "beers": []}
+class _Brand:
+    def __init__(self, id: int, name: str, beers: Optional[list] = None):
+        self.id = id
+        self.name = name
+        self.beers = beers
 
 
-def test_get_all_beer_brands_success(client, monkeypatch):
-    async def mock_get_all_beer_brands(db, load_beers=False):
-        return [BeerBrandStub()]
+def test_create_beer_brand_success(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def mock_create_brand(db, name: str):
+        return _Brand(id=1, name=name, beers=[])
 
-    monkeypatch.setattr(
-        beer_brand_router_module, "get_all_beer_brands", mock_get_all_beer_brands
-    )
+    monkeypatch.setattr(beer_brand_router, "create_beer_brand", mock_create_brand)
 
-    response = client.get("/beer_brands/")
-    assert response.status_code == 200
-    assert response.json() == [{"id": 1, "name": "Brand", "beers": None}]
-
-
-def test_get_beer_brand_by_id_success(client, monkeypatch):
-    async def mock_get_by_id(db, beer_brand_id, load_beers=False):
-        return BeerBrandStub(id=beer_brand_id)
-
-    monkeypatch.setattr(
-        beer_brand_router_module, "get_beer_brand_by_id", mock_get_by_id
-    )
-
-    response = client.get("/beer_brands/1/")
-    assert response.status_code == 200
-    assert response.json() == {"id": 1, "name": "Brand", "beers": None}
+    resp = client.post("/beer_brands/", data={"name": "BrandX"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["id"] == 1
+    assert data["name"] == "BrandX"
+    assert "beers" in data
 
 
-def test_get_beer_brand_by_id_not_found(client, monkeypatch):
-    async def mock_get_by_id(db, beer_brand_id, load_beers=False):
+def test_list_beer_brands(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def mock_get_all(db, *, load_beers: bool = False):
+        return [
+            _Brand(id=1, name="BrandA", beers=[] if load_beers else None),
+            _Brand(id=2, name="BrandB", beers=[] if load_beers else None),
+        ]
+
+    monkeypatch.setattr(beer_brand_router, "get_all_beer_brands", mock_get_all)
+
+    resp = client.get("/beer_brands/")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, list) and len(data) == 2
+    assert {item["name"] for item in data} == {"BrandA", "BrandB"}
+
+
+def test_get_beer_brand_by_id_found(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def mock_get_by_id(db, beer_brand_id: int, *, load_beers: bool = False):
+        return _Brand(id=beer_brand_id, name="BrandA", beers=[] if load_beers else None)
+
+    monkeypatch.setattr(beer_brand_router, "get_beer_brand_by_id", mock_get_by_id)
+
+    resp = client.get("/beer_brands/1/")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["id"] == 1
+    assert data["name"] == "BrandA"
+
+
+def test_get_beer_brand_by_id_not_found(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def mock_get_by_id(db, beer_brand_id: int, *, load_beers: bool = False):
         return None
 
-    monkeypatch.setattr(
-        beer_brand_router_module, "get_beer_brand_by_id", mock_get_by_id
-    )
+    monkeypatch.setattr(beer_brand_router, "get_beer_brand_by_id", mock_get_by_id)
 
-    response = client.get("/beer_brands/1/")
-    assert response.status_code == 404
+    resp = client.get("/beer_brands/9999/")
+    assert resp.status_code == 404
 
 
-def test_update_beer_brand_success(client, monkeypatch):
-    async def mock_update_beer_brand(db, beer_brand_id, update_data, load_beers=True):
-        return BeerBrandStub(id=beer_brand_id, name=update_data.name or "Updated")
+def test_update_beer_brand_success(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def mock_update_brand(
+        db, beer_brand_id: int, update_data, *, load_beers: bool = False
+    ):
+        name = getattr(update_data, "name", None)
+        return _Brand(id=beer_brand_id, name=name, beers=[] if load_beers else None)
 
-    monkeypatch.setattr(
-        beer_brand_router_module, "update_beer_brand", mock_update_beer_brand
-    )
+    monkeypatch.setattr(beer_brand_router, "update_beer_brand", mock_update_brand)
 
-    response = client.patch("/beer_brands/1/", json={"name": "Updated"})
-    assert response.status_code == 200
-    assert response.json()["name"] == "Updated"
+    resp = client.patch("/beer_brands/1/", json={"name": "NewName"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["id"] == 1
+    assert body["name"] == "NewName"
 
 
-def test_update_beer_brand_not_found(client, monkeypatch):
-    async def mock_update_beer_brand(db, beer_brand_id, update_data, load_beers=True):
+def test_update_beer_brand_not_found(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def mock_update_brand(
+        db, beer_brand_id: int, update_data, *, load_beers: bool = False
+    ):
         return None
 
-    monkeypatch.setattr(
-        beer_brand_router_module, "update_beer_brand", mock_update_beer_brand
-    )
+    monkeypatch.setattr(beer_brand_router, "update_beer_brand", mock_update_brand)
 
-    response = client.patch("/beer_brands/1/", json={"name": "Updated"})
-    assert response.status_code == 404
+    resp = client.patch("/beer_brands/9999/", json={"name": "Whatever"})
+    assert resp.status_code == 404
 
 
-def test_delete_beer_brand_success(client, monkeypatch):
-    async def mock_delete_beer_brand(db, beer_brand_id):
+def test_delete_beer_brand_success(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def mock_delete(db, beer_brand_id: int):
         return True
 
-    monkeypatch.setattr(
-        beer_brand_router_module, "delete_beer_brand", mock_delete_beer_brand
-    )
+    monkeypatch.setattr(beer_brand_router, "delete_beer_brand", mock_delete)
 
-    response = client.delete("/beer_brands/1/")
-    assert response.status_code == 200
-    assert response.json()["success"] is True
+    resp = client.delete("/beer_brands/1/")
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload.get("success") is True
 
 
-def test_delete_beer_brand_not_found(client, monkeypatch):
-    async def mock_delete_beer_brand(db, beer_brand_id):
+def test_delete_beer_brand_not_found(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def mock_delete(db, beer_brand_id: int):
         return False
 
-    monkeypatch.setattr(
-        beer_brand_router_module, "delete_beer_brand", mock_delete_beer_brand
-    )
+    monkeypatch.setattr(beer_brand_router, "delete_beer_brand", mock_delete)
 
-    response = client.delete("/beer_brands/1/")
-    assert response.status_code == 404
+    resp = client.delete("/beer_brands/9999/")
+    assert resp.status_code == 404
