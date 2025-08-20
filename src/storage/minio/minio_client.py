@@ -5,6 +5,7 @@ from typing import BinaryIO, Optional
 from urllib.parse import urlparse
 
 from minio import Minio
+from minio.deleteobjects import DeleteObject
 from minio.error import S3Error
 
 from src.config.settings import settings
@@ -127,6 +128,30 @@ class MinioClientWrapper:
             logger.info("Deleted %s from %s.", object_name, bucket_name)
         except S3Error as e:
             logger.error("Failed to delete %s from %s: %s", object_name, bucket_name, e)
+            raise
+
+    def delete_files(self, bucket_name: str, object_names: list[str]) -> None:
+        """Deletes multiple objects from a bucket in a single batch.
+
+        Args:
+            bucket_name (str): Name of the bucket.
+            object_names (list[str]): List of object keys to delete.
+
+        Raises:
+            S3Error: If the deletion fails.
+        """
+        try:
+            delete_objects = [DeleteObject(name) for name in object_names]
+            errors = self.client.remove_objects(bucket_name, delete_objects)
+            for error in errors:
+                logger.error(
+                    "Failed to delete %s from %s: %s",
+                    error.name,
+                    bucket_name,
+                    error.message,
+                )
+        except S3Error as e:
+            logger.error("Failed to delete objects from %s: %s", bucket_name, e)
             raise
 
     def object_exists(self, bucket_name: str, object_name: str) -> bool:

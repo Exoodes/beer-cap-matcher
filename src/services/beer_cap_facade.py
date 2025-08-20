@@ -1,5 +1,6 @@
 from typing import Awaitable, BinaryIO, Callable, Optional
 
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas.augmented_beer_cap.augmented_cap_create import (
@@ -10,7 +11,6 @@ from src.api.schemas.country.country_create import CountryCreateSchema
 from src.config.settings import settings
 from src.db.crud.augmented_cap_crud import (
     create_augmented_cap,
-    delete_augmented_cap,
     get_all_augmented_caps,
 )
 from src.db.crud.beer_brand_crud import (
@@ -213,16 +213,17 @@ class BeerCapFacade:
         return result is not None
 
     async def delete_all_augmented_caps(self) -> int:
-        deleted_count = 0
         async with self.session_maker() as session:
             augmented_caps = await get_all_augmented_caps(session)
-            for aug in augmented_caps:
-                self.minio_wrapper.delete_file(self.augmented_caps_bucket, aug.s3_key)
-                await delete_augmented_cap(session, aug.id)
-                deleted_count += 1
+            s3_keys = [aug.s3_key for aug in augmented_caps]
 
+            if s3_keys:
+                self.minio_wrapper.delete_files(self.augmented_caps_bucket, s3_keys)
+
+            await session.execute(delete(AugmentedCap))
             await session.commit()
-        return deleted_count
+
+        return len(s3_keys)
 
     async def delete_beer_and_caps(self, beer_id: int) -> bool:
         async with self.session_maker() as session:

@@ -327,16 +327,14 @@ class TestBeerCapFacade:
             content_type=TEST_IMAGE_CONTENT_TYPE,
         )
 
-        mock_minio_client_wrapper.delete_file.reset_mock()
+        mock_minio_client_wrapper.delete_files.reset_mock()
         deleted_count = await facade.delete_all_augmented_caps()
 
         assert deleted_count == 2
-        mock_minio_client_wrapper.delete_file.assert_any_call(
-            facade.augmented_caps_bucket, "aug_1.jpg"
-        )
-        mock_minio_client_wrapper.delete_file.assert_any_call(
-            facade.augmented_caps_bucket, "aug_2.jpg"
-        )
+        mock_minio_client_wrapper.delete_files.assert_called_once()
+        args = mock_minio_client_wrapper.delete_files.call_args[0]
+        assert args[0] == facade.augmented_caps_bucket
+        assert set(args[1]) == {"aug_1.jpg", "aug_2.jpg"}
         all_augs = await get_all_augmented_caps(db_session)
         assert len(all_augs) == 0
 
