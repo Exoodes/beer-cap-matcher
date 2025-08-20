@@ -80,10 +80,6 @@ class TestBeerCapFacade:
         assert fetched_cap.s3_key == cap_filename
         assert fetched_cap.collected_date == cap_metadata.collected_date
 
-        print(
-            f"✅ test_create_cap_for_existing_beer_and_upload passed for {cap_filename}"
-        )
-
     async def test_create_cap_and_related_entities(
         self,
         db_session: AsyncSession,
@@ -183,7 +179,6 @@ class TestBeerCapFacade:
         fetched_aug_cap = await get_augmented_cap_by_id(db_session, aug_cap.id)
         assert fetched_aug_cap is not None
         assert fetched_aug_cap.s3_key == aug_filename
-        print(f"✅ test_add_augmented_cap_and_upload passed for {aug_filename}")
 
     async def test_get_presigned_url_for_cap(
         self, mock_minio_client_wrapper: MagicMock
@@ -225,8 +220,6 @@ class TestBeerCapFacade:
             facade.augmented_caps_bucket, augmented_s3_key
         )
         assert presigned_url_augmented == expected_url_augmented
-
-        print("✅ test_get_presigned_url_for_cap passed")
 
     async def test_delete_augmented_caps(
         self,
@@ -284,7 +277,6 @@ class TestBeerCapFacade:
 
         remaining_augs = await get_all_augmented_caps(db_session)
         assert all(aug.id != ac.id for ac in aug_caps for aug in remaining_augs)
-        print("✅ test_delete_augmented_caps passed")
 
     async def test_delete_all_augmented_caps(
         self,
@@ -404,4 +396,3 @@ class TestBeerCapFacade:
 
         fetched_beer = await get_beer_by_id(db_session, main_beer_cap.beer_id)
         assert fetched_beer is None
-        print("✅ test_delete_beer_and_caps passed")

@@ -1,5 +1,6 @@
 import asyncio
 import io
+import logging
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Generator
@@ -13,6 +14,8 @@ from src.config import settings
 from src.db.database import get_db_resources
 from src.db.entities import Base
 from src.storage.minio.minio_client import MinioClientWrapper
+
+logger = logging.getLogger(__name__)
 
 TEST_BUCKET_NAME = settings.test_minio_bucket_name
 TEST_DUMMY_IMAGE_PATH = Path("tests/data/test_image.jpg")
@@ -84,7 +87,7 @@ def real_minio_client() -> Generator[MinioClientWrapper, None, None]:
             client.client.remove_object(TEST_BUCKET_NAME, obj.object_name)
         client.client.remove_bucket(TEST_BUCKET_NAME)
     except Exception as e:
-        print(f"Warning: Failed to clean up Minio bucket '{TEST_BUCKET_NAME}': {e}")
+        logger.warning("Failed to clean up Minio bucket '%s': %s", TEST_BUCKET_NAME, e)
 
 
 @pytest.fixture(scope="function")

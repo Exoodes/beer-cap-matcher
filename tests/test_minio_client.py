@@ -31,7 +31,6 @@ class TestMinioClientIntegration:
 
         stat = real_minio_client.client.stat_object(TEST_BUCKET_NAME, object_name)
         assert stat.size == len(dummy_image_bytes)
-        print(f"✅ Uploaded and verified: {object_name} (size: {stat.size})")
 
     def test_download_bytes(
         self, real_minio_client: MinioClientWrapper, dummy_image_bytes: bytes
@@ -52,7 +51,6 @@ class TestMinioClientIntegration:
         )
 
         assert downloaded_data == dummy_image_bytes
-        print(f"✅ Downloaded and verified content for: {object_name}")
 
     def test_delete_file(
         self, real_minio_client: MinioClientWrapper, dummy_image_bytes: bytes
@@ -77,7 +75,6 @@ class TestMinioClientIntegration:
         assert "NoSuchKey" in str(excinfo.value) or "Object not found" in str(
             excinfo.value
         )
-        print(f"✅ Deleted and verified absence of: {object_name}")
 
     def test_generate_presigned_url(self, real_minio_client: MinioClientWrapper):
         object_name = "test_presigned_url.jpg"
@@ -90,7 +87,6 @@ class TestMinioClientIntegration:
         assert presigned_url.startswith(
             f"http://{TEST_MINIO_ENDPOINT}/{TEST_BUCKET_NAME}/{object_name}"
         )
-        print(f"✅ Generated presigned URL for: {object_name}")
 
     def test_object_exists_existing(
         self, real_minio_client: MinioClientWrapper, dummy_image_bytes: bytes

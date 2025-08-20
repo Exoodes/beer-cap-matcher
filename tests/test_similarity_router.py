@@ -1,7 +1,7 @@
+import types
+import sys
 from dataclasses import dataclass
 from datetime import date
-import sys
-import types
 
 import pytest
 from fastapi import FastAPI
