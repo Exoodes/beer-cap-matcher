@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from src.config.settings import settings
+from src.config import settings
 
 
 def get_db_resources(

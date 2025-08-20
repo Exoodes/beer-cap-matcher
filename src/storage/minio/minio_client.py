@@ -8,7 +8,7 @@ from minio import Minio
 from minio.deleteobjects import DeleteObject
 from minio.error import S3Error
 
-from src.config.settings import settings
+from src.config import settings
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)

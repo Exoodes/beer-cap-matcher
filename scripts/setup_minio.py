@@ -1,6 +1,6 @@
 import asyncio
 
-from src.config.settings import settings
+from src.config import settings
 from src.storage.minio.minio_client import MinioClientWrapper
 
 

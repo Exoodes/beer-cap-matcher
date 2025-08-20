@@ -8,7 +8,7 @@ from src.api.schemas.augmented_beer_cap.augmented_cap_create import (
 )
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.api.schemas.country.country_create import CountryCreateSchema
-from src.config.settings import settings
+from src.config import settings
 from src.db.crud.augmented_cap_crud import (
     create_augmented_cap,
     get_all_augmented_caps,

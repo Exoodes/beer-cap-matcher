@@ -9,7 +9,7 @@ import pytest
 from pytest_asyncio import fixture as async_fixture
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.config.settings import settings
+from src.config import settings
 from src.db.database import get_db_resources
 from src.db.entities import Base
 from src.storage.minio.minio_client import MinioClientWrapper
