@@ -1,6 +1,6 @@
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock
-import sys
 
 from PIL import Image
 

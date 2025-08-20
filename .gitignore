@@ -7,3 +7,6 @@ data/models/metadata.pkl
 data/models/faiss.index
 data/models/u2net.pth
 data/models/augmentation_map.json
+.ruff_cache
+.pytest_cache
+.mypy_cache

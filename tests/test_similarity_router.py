@@ -1,21 +1,14 @@
 from dataclasses import dataclass
 from datetime import date
-import sys
-import types
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, MagicMock
 
-# Stub out heavy cap detection service dependencies to avoid OpenCV import
-cap_detection_stub = types.ModuleType("src.services.cap_detection_service")
-cap_detection_stub.CapDetectionService = type("CapDetectionService", (), {})
-sys.modules["src.services.cap_detection_service"] = cap_detection_stub
-
-from src.api.routers.similarity_router import router
-from src.api.dependencies.services import get_query_service
 from src.api.dependencies.facades import get_beer_cap_facade
+from src.api.dependencies.services import get_query_service
+from src.api.routers.similarity_router import router
 from src.api.schemas.similarity.query_response import BeerCapResponseWithQueryResult
 
 
@@ -55,6 +48,7 @@ def client() -> TestClient:
 
     mock_query_service = MagicMock()
     mock_query_service.query_image = AsyncMock(return_value=([cap], [result]))
+
     mock_facade = MagicMock()
     mock_facade.get_presigned_url_for_cap.return_value = "http://example.com/test.jpg"
 
@@ -74,9 +68,10 @@ def test_query_image_success(client: TestClient) -> None:
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list) and len(data) == 1
-    parsed = [BeerCapResponseWithQueryResult.model_validate(item) for item in data]
 
+    parsed = [BeerCapResponseWithQueryResult.model_validate(item) for item in data]
     item = parsed[0]
+
     assert item.id == 1
     assert item.variant_name == "Test Cap"
     assert item.collected_date == date(2023, 1, 1)
