@@ -2,7 +2,7 @@ import logging
 
 from colorlog import ColoredFormatter
 
-from src.config.settings import settings
+from src.config import settings
 
 
 def setup_logging():

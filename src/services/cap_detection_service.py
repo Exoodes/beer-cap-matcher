@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.cap_detection.embedding_generator import EmbeddingGenerator
 from src.cap_detection.image_processor import ImageAugmenter
 from src.cap_detection.index_builder import IndexBuilder
-from src.config.settings import settings
+from src.config import settings
 from src.db.crud.augmented_cap_crud import create_augmented_cap, get_all_augmented_caps
 from src.db.crud.beer_cap_crud import get_all_beer_caps
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER

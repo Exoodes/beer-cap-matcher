@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 if TYPE_CHECKING:
     from src.cap_detection.image_querier import AggregatedResult, ImageQuerier
 
-from src.config.settings import settings
+from src.config import settings
 from src.db.crud.augmented_cap_crud import get_all_augmented_caps
 from src.db.crud.beer_cap_crud import get_beer_cap_by_id
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER

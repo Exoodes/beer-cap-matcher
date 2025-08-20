@@ -3,7 +3,7 @@ from typing import Optional
 
 import gdown
 
-from src.config.settings import settings
+from src.config import settings
 
 
 def download_u2net_model(model_path: Optional[str] = None) -> None:
