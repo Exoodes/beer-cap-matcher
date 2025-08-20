@@ -106,13 +106,7 @@ class ImageQuerier:
             data, self.background_remover, self.image_size
         )
 
-        image_array = np.array(processed_image)
-        rgb = image_array[..., :3] if image_array.shape[-1] == 4 else image_array
-        image_pil = Image.fromarray(rgb).resize(
-            self.image_size, Image.Resampling.LANCZOS
-        )
-
-        image_tensor = self.preprocess(image_pil).unsqueeze(0).to(self.device)
+        image_tensor = self.preprocess(processed_image).unsqueeze(0).to(self.device)
         return image_tensor
 
     def _query_embedding(
