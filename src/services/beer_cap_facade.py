@@ -140,37 +140,6 @@ class BeerCapFacade:
             )
             return fetched_cap
 
-    async def create_beer_with_cap_and_upload(
-        self,
-        beer_name: str,
-        beer_brand_id: int,
-        cap_metadata: BeerCapCreateSchema,
-        image_data: BinaryIO,
-        image_length: int,
-        content_type: str = "image/png",
-    ) -> BeerCap:
-        async with self.session_maker() as session:
-            beer = await create_beer(session, beer_name, beer_brand_id, commit=False)
-
-            object_name = cap_metadata.filename
-            self.minio_wrapper.upload_file(
-                self.original_caps_bucket,
-                object_name,
-                image_data,
-                image_length,
-                content_type,
-            )
-
-            created_cap = await create_beer_cap(
-                session, beer.id, object_name, cap_metadata
-            )
-            fetched_cap = await get_beer_cap_by_id(
-                session, created_cap.id, load_beer=True
-            )
-            if fetched_cap is None:
-                raise RuntimeError("Failed to fetch created BeerCap.")
-            return fetched_cap
-
     async def create_cap_for_existing_beer_and_upload(
         self,
         beer_id: int,
