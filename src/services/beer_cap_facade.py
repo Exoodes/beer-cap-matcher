@@ -1,4 +1,4 @@
-from typing import Awaitable, BinaryIO, Callable, Optional
+from typing import BinaryIO, Callable, Optional
 
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
