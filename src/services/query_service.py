@@ -1,12 +1,16 @@
+from __future__ import annotations
+
 import asyncio
 import pickle
 import tempfile
-from typing import Any, Callable, List, Tuple, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import faiss  # type: ignore[import-untyped]
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.cap_detection.image_querier import AggregatedResult, ImageQuerier
+if TYPE_CHECKING:
+    from src.cap_detection.image_querier import AggregatedResult, ImageQuerier
+
 from src.config.settings import settings
 from src.db.crud.augmented_cap_crud import get_all_augmented_caps
 from src.db.crud.beer_cap_crud import get_beer_cap_by_id
@@ -16,6 +20,10 @@ from src.storage.minio.minio_client import MinioClientWrapper
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+
+class BeerCapNotFoundError(Exception):
+    """Raised when a beer cap ID is not found in the database."""
 
 
 class QueryService:
@@ -74,6 +82,8 @@ class QueryService:
 
         augmented_cap_to_cap = {str(aug.id): aug.beer_cap_id for aug in augmented_caps}
 
+        from src.cap_detection.image_querier import ImageQuerier
+
         self.querier = ImageQuerier(
             index=self.index,
             metadata=self.metadata,
@@ -86,7 +96,7 @@ class QueryService:
         image_bytes: bytes,
         top_k: int = 3,
         faiss_k: int = 10000,
-    ) -> Tuple[List[BeerCap], List[AggregatedResult]]:
+    ) -> tuple[list[BeerCap], list[AggregatedResult]]:
         if self.querier is None:
             raise RuntimeError("Index not loaded; call load_index() first")
 
@@ -95,13 +105,15 @@ class QueryService:
         )
         logger.debug("Queried %d results", len(results))
 
-        caps: List[BeerCap] = []
+        caps: list[BeerCap] = []
 
         session = self.session_maker()
         async with session:
             for cap_id in results.keys():
                 cap = await get_beer_cap_by_id(session, cap_id)
-                assert cap is not None, f"Cap with ID {cap_id} not found"
+                if cap is None:
+                    logger.warning("Cap with ID %s not found", cap_id)
+                    raise BeerCapNotFoundError(f"Cap with ID {cap_id} not found")
                 caps.append(cap)
 
         return caps, [result for result in results.values()]

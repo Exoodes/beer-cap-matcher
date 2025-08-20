@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 ResponseDict = dict[int | str, dict[str, Any]]
 

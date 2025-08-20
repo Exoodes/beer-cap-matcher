@@ -1,6 +1,5 @@
 import io
 from pathlib import Path
-from typing import List, Tuple
 
 import numpy as np
 from PIL import Image
@@ -16,7 +15,7 @@ logger = get_logger(__name__)
 def _process_image_for_embedding(
     image_bytes: bytes,
     background_remover: BackgroundRemover,
-    image_size: Tuple[int, int] = (224, 224),
+    image_size: tuple[int, int] = (224, 224),
 ) -> Image.Image:
     """
     Centralized function for image preprocessing.
@@ -35,7 +34,7 @@ class ImageAugmenter:
         self,
         u2net_model_path: Path,
         augmentations_per_image: int = 10,
-        image_size: Tuple[int, int] = (224, 224),
+        image_size: tuple[int, int] = (224, 224),
     ):
         """Configure the augmentation pipeline.
 
@@ -51,7 +50,7 @@ class ImageAugmenter:
         self.image_size = image_size
         self.background_remover = BackgroundRemover(model_path=u2net_model_path)
 
-    def augment_image_bytes(self, image_bytes: bytes) -> List[bytes]:
+    def augment_image_bytes(self, image_bytes: bytes) -> list[bytes]:
         """
         Augment a single image provided as bytes and return a list of augmented image bytes (including the original).
         The processing pipeline is now handled by the new utility function.
@@ -73,7 +72,7 @@ class ImageAugmenter:
             Image.fromarray(arr, mode="RGBA").save(buf, format="PNG")
             return buf.getvalue()
 
-        results: List[bytes] = []
+        results: list[bytes] = []
 
         results.append(to_bytes(np.dstack([rgb, alpha])))
 

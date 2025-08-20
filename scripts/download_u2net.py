@@ -13,13 +13,15 @@ def download_u2net_model(model_path: Optional[str] = None) -> None:
     creates the necessary directories and downloads the model.
 
     Args:
-        model_path: The full path where the model should be saved.
-            If None, it defaults to the value of the U2NET_MODEL_PATH
-            environment variable, or 'data/models/u2net.pth' if the
-            variable is not set.
+        model_path: The full path where the model should be saved. If ``None``,
+            the value of :data:`settings.u2net_model_path` is used. By default
+            this points to ``models/u2net.pth`` but can be overridden via the
+            ``U2NET_MODEL_PATH`` environment variable.
     """
     if model_path is None:
-        model_path = settings.u2net_model_path or "data/models/u2net.pth"
+        # Use the same default path as ``settings.u2net_model_path`` which
+        # itself honours the ``U2NET_MODEL_PATH`` environment variable.
+        model_path = str(settings.u2net_model_path)
 
     if not os.path.exists(model_path):
         model_dir = os.path.dirname(model_path)

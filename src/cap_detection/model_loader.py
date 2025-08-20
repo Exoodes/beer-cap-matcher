@@ -1,5 +1,4 @@
 from functools import lru_cache
-from typing import Tuple
 
 import clip  # type: ignore[import-untyped]
 import torch
@@ -12,7 +11,7 @@ logger = get_logger(__name__)
 
 
 @lru_cache(maxsize=1)
-def load_model_and_preprocess() -> Tuple[nn.Module, Compose]:
+def load_model_and_preprocess() -> tuple[nn.Module, Compose]:
     """Load the CLIP model and preprocessing pipeline.
 
     Returns:

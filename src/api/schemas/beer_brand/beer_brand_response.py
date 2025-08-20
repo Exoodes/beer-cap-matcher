@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import Field
 
@@ -7,7 +7,7 @@ from src.api.schemas.beer_brand.beer_brand_response_base import BeerBrandRespons
 
 
 class BeerBrandResponseWithBeers(BeerBrandResponseBase):
-    beers: Optional[List[BeerResponseBase]] = Field(
+    beers: Optional[list[BeerResponseBase]] = Field(
         default=None,
         description="List of beers produced by this beer brand",
     )

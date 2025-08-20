@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +25,7 @@ async def get_augmented_cap_by_id(
     return result.scalar_one_or_none()
 
 
-async def get_all_augmented_caps(session: AsyncSession) -> List[AugmentedCap]:
+async def get_all_augmented_caps(session: AsyncSession) -> list[AugmentedCap]:
     result = await session.execute(select(AugmentedCap))
     return list(result.scalars().all())
 

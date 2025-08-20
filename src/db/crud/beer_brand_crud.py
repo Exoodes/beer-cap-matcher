@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,7 +44,7 @@ async def get_beer_brand_by_name(
 
 async def get_all_beer_brands(
     session: AsyncSession, load_beers: bool = False
-) -> List[BeerBrand]:
+) -> list[BeerBrand]:
     stmt = select(BeerBrand)
     if load_beers:
         stmt = stmt.options(selectinload(BeerBrand.beers))
