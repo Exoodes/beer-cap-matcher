@@ -10,6 +10,8 @@ logger = get_logger(__name__)
 
 
 class IndexBuilder:
+    """Create and serialize FAISS indexes for cap embeddings."""
+
     def build_index(
         self, embeddings: List[List[float]], metadata: List[int]
     ) -> tuple[faiss.IndexFlatIP, bytes]:

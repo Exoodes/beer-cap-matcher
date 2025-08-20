@@ -14,7 +14,15 @@ logger = get_logger(__name__)
 
 
 class BackgroundRemover:
+    """Remove backgrounds from images using a pre-trained U2NET model."""
+
     def __init__(self, model_path: Path):
+        """Load the U2NET model used for foreground extraction.
+
+        Args:
+            model_path: Filesystem path to the serialized U2NET weights.
+        """
+
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = U2NET(3, 1)
         self.model.load_state_dict(torch.load(model_path, map_location=self.device))
@@ -26,6 +34,16 @@ class BackgroundRemover:
         )
 
     def remove_background(self, image: Union[Image.Image, np.ndarray]) -> Image.Image:
+        """Generate an RGBA image with the background removed.
+
+        Args:
+            image: Input image as a PIL object or NumPy array.
+
+        Returns:
+            The image with an alpha channel where background pixels are fully
+            transparent.
+        """
+
         if isinstance(image, np.ndarray):
             image = Image.fromarray(image).convert("RGB")
         else:

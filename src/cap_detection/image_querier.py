@@ -33,6 +33,8 @@ class _Agg:
 
 
 class ImageQuerier:
+    """Query a FAISS index with processed cap images."""
+
     def __init__(
         self,
         index: faiss.Index,
@@ -41,6 +43,16 @@ class ImageQuerier:
         u2net_model_path: str,
         image_size: Tuple[int, int] = (224, 224),
     ):
+        """Initialise the querier with an index and preprocessing tools.
+
+        Args:
+            index: FAISS index containing cap embeddings.
+            metadata: Mapping of index entries to cap identifiers.
+            augmented_cap_to_cap: Lookup from augmented image IDs to original IDs.
+            u2net_model_path: Path to the background removal model.
+            image_size: Resolution used for preprocessing query images.
+        """
+
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model: Any
         self.preprocess: Callable[[Image.Image], torch.Tensor]
@@ -58,6 +70,19 @@ class ImageQuerier:
         top_k: int = 3,
         faiss_k: int = 10000,
     ) -> Dict[int, AggregatedResult]:
+        """Run a nearest-neighbour search for a cap image.
+
+        Args:
+            image_bytes: Raw image data to search against the index.
+            top_k: Number of aggregated results to return.
+            faiss_k: Number of raw FAISS neighbours to retrieve before
+                aggregation.
+
+        Returns:
+            A dictionary mapping cap IDs to their aggregated similarity
+            statistics, ordered by mean similarity.
+        """
+
         if image_bytes is None:
             raise ValueError("image_bytes must be provided")
 

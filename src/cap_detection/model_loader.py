@@ -13,6 +13,12 @@ logger = get_logger(__name__)
 
 @lru_cache(maxsize=1)
 def load_model_and_preprocess() -> Tuple[nn.Module, Compose]:
+    """Load the CLIP model and preprocessing pipeline.
+
+    Returns:
+        A tuple containing the loaded model and its preprocessing transform.
+    """
+
     try:
         device: str = "cuda" if torch.cuda.is_available() else "cpu"
         model, preprocess = clip.load("ViT-B/32", device=device)

@@ -3,26 +3,14 @@ from pathlib import Path
 from typing import List, Tuple
 
 import numpy as np
-from PIL import Image, ImageChops
+from PIL import Image
 
 from src.cap_detection.background_remover import BackgroundRemover
 from src.utils.logger import get_logger
 
-from .augmentation import get_augmentation_pipeline
+from .augmentation import crop_transparent, get_augmentation_pipeline
 
 logger = get_logger(__name__)
-
-
-def crop_transparent(image: Image.Image) -> Image.Image:
-    if image.mode != "RGBA":
-        image = image.convert("RGBA")
-    bg = Image.new("RGBA", image.size, (0, 0, 0, 0))
-    diff = ImageChops.difference(image, bg)
-    bbox = diff.getbbox()
-    if bbox:
-        return image.crop(bbox)
-    else:
-        return image
 
 
 def _process_image_for_embedding(
@@ -41,12 +29,23 @@ def _process_image_for_embedding(
 
 
 class ImageAugmenter:
+    """Generate augmented versions of cap images."""
+
     def __init__(
         self,
         u2net_model_path: Path,
         augmentations_per_image: int = 10,
         image_size: Tuple[int, int] = (224, 224),
     ):
+        """Configure the augmentation pipeline.
+
+        Args:
+            u2net_model_path: Path to the background removal model weights.
+            augmentations_per_image: Number of augmented images to generate in
+                addition to the original.
+            image_size: Output resolution for the augmentation pipeline.
+        """
+
         self.augmentations_per_image = augmentations_per_image
         self.pipeline = get_augmentation_pipeline(image_size=image_size)
         self.image_size = image_size

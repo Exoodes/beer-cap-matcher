@@ -5,6 +5,16 @@ from PIL import Image, ImageChops
 
 
 def get_augmentation_pipeline(image_size: Tuple[int, int] = (224, 224)) -> A.Compose:
+    """Create the albumentations pipeline used for cap images.
+
+    Args:
+        image_size: Target size to which images will be resized.
+
+    Returns:
+        An ``albumentations.Compose`` instance performing resizing, affine
+        transforms, brightness/contrast adjustment, and optional blurs.
+    """
+
     return A.Compose(
         [
             A.Resize(*image_size),
@@ -32,6 +42,16 @@ def get_augmentation_pipeline(image_size: Tuple[int, int] = (224, 224)) -> A.Com
 
 
 def crop_transparent(image: Image.Image) -> Image.Image:
+    """Crop fully transparent borders from an RGBA image.
+
+    Args:
+        image: PIL image that may contain transparent padding.
+
+    Returns:
+        The cropped image with surrounding transparent pixels removed. If no
+        transparent region is found, the original image is returned.
+    """
+
     if image.mode != "RGBA":
         image = image.convert("RGBA")
     bg = Image.new("RGBA", image.size, (0, 0, 0, 0))
