@@ -1,6 +1,3 @@
-# year: Optional[int] = Field(None, description="Year the cap was used or produced")
-# country: Optional[str] = Field(None, description="Country of origin")
-
 from datetime import date
 from typing import Optional
 
@@ -8,9 +5,13 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class BeerCapCreateSchema(BaseModel):
-    """
-    Schema for creating a new beer cap entry, including image filename
-    and optional variant name.
+    """Schema for creating a new beer cap.
+
+    Requires an image ``filename``. Optional fields allow setting a
+    ``variant_name``, ``collected_date``, and linking the cap to an
+    existing beer via ``beer_id`` or defining a new beer with
+    ``beer_name``, ``beer_brand_id``/``beer_brand_name``, and
+    ``country_id``/``country_name``.
     """
 
     filename: str = Field(
@@ -23,22 +24,31 @@ class BeerCapCreateSchema(BaseModel):
         default=None, description="Date when this cap was collected"
     )
     beer_id: Optional[int] = Field(
-        default=None, description="ID of an existing beer to attach the cap to"
+        default=None,
+        description=(
+            "ID of an existing beer to attach the cap to; mutually exclusive with"
+            " beer_name"
+        ),
     )
     beer_name: Optional[str] = Field(
-        default=None, description="Name of a new beer to create"
+        default=None,
+        description=("Name of a new beer to create; mutually exclusive with beer_id"),
     )
     beer_brand_id: Optional[int] = Field(
-        default=None, description="ID of an existing beer brand for a new beer"
+        default=None,
+        description="ID of an existing beer brand when creating a new beer",
     )
     beer_brand_name: Optional[str] = Field(
-        default=None, description="Name of a new beer brand for a new beer"
+        default=None,
+        description="Name of a new beer brand when creating a new beer",
     )
     country_id: Optional[int] = Field(
-        default=None, description="ID of an existing country for a new beer"
+        default=None,
+        description="ID of an existing country when creating a new beer",
     )
     country_name: Optional[str] = Field(
-        default=None, description="Name of a new country for a new beer"
+        default=None,
+        description="Name of a new country when creating a new beer",
     )
 
     @field_validator("beer_brand_id", "beer_brand_name", "country_id", "country_name")

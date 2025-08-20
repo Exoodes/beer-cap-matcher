@@ -1,5 +1,6 @@
-from typing import Awaitable, BinaryIO, Callable, Optional
+from typing import BinaryIO, Callable, Optional
 
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas.augmented_beer_cap.augmented_cap_create import (
@@ -10,7 +11,6 @@ from src.api.schemas.country.country_create import CountryCreateSchema
 from src.config.settings import settings
 from src.db.crud.augmented_cap_crud import (
     create_augmented_cap,
-    delete_augmented_cap,
     get_all_augmented_caps,
 )
 from src.db.crud.beer_brand_crud import (
@@ -140,37 +140,6 @@ class BeerCapFacade:
             )
             return fetched_cap
 
-    async def create_beer_with_cap_and_upload(
-        self,
-        beer_name: str,
-        beer_brand_id: int,
-        cap_metadata: BeerCapCreateSchema,
-        image_data: BinaryIO,
-        image_length: int,
-        content_type: str = "image/png",
-    ) -> BeerCap:
-        async with self.session_maker() as session:
-            beer = await create_beer(session, beer_name, beer_brand_id, commit=False)
-
-            object_name = cap_metadata.filename
-            self.minio_wrapper.upload_file(
-                self.original_caps_bucket,
-                object_name,
-                image_data,
-                image_length,
-                content_type,
-            )
-
-            created_cap = await create_beer_cap(
-                session, beer.id, object_name, cap_metadata
-            )
-            fetched_cap = await get_beer_cap_by_id(
-                session, created_cap.id, load_beer=True
-            )
-            if fetched_cap is None:
-                raise RuntimeError("Failed to fetch created BeerCap.")
-            return fetched_cap
-
     async def create_cap_for_existing_beer_and_upload(
         self,
         beer_id: int,
@@ -244,16 +213,17 @@ class BeerCapFacade:
         return result is not None
 
     async def delete_all_augmented_caps(self) -> int:
-        deleted_count = 0
         async with self.session_maker() as session:
             augmented_caps = await get_all_augmented_caps(session)
-            for aug in augmented_caps:
-                self.minio_wrapper.delete_file(self.augmented_caps_bucket, aug.s3_key)
-                await delete_augmented_cap(session, aug.id)
-                deleted_count += 1
+            s3_keys = [aug.s3_key for aug in augmented_caps]
 
+            if s3_keys:
+                self.minio_wrapper.delete_files(self.augmented_caps_bucket, s3_keys)
+
+            await session.execute(delete(AugmentedCap))
             await session.commit()
-        return deleted_count
+
+        return len(s3_keys)
 
     async def delete_beer_and_caps(self, beer_id: int) -> bool:
         async with self.session_maker() as session:

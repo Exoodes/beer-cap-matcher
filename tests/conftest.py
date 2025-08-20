@@ -65,6 +65,7 @@ def mock_minio_client_wrapper() -> MagicMock:
         f"{TEST_MINIO_ENDPOINT}/{TEST_BUCKET_NAME}/{mock_s3_key}"
     )
     mock_minio.delete_file.return_value = None
+    mock_minio.delete_files.return_value = None
     return mock_minio
 
 
