@@ -1,3 +1,4 @@
+import json
 import logging
 import time
 
@@ -25,11 +26,31 @@ class LogRequestMiddleware(BaseHTTPMiddleware):
         query_params = dict(request.query_params)
 
         body_info = "<not logged>"
+        max_body_size = 2048
+
         if content_type.startswith("application/json"):
             try:
                 body_bytes = await request.body()
-                request._body = body_bytes
-                body_info = body_bytes.decode("utf-8")
+                request.state.body = body_bytes
+
+                async def receive() -> dict:
+                    return {
+                        "type": "http.request",
+                        "body": body_bytes,
+                        "more_body": False,
+                    }
+
+                request = Request(request.scope, receive)
+
+                if len(body_bytes) <= max_body_size:
+                    body_json = json.loads(body_bytes)
+                    sensitive_keys = {"password", "token", "secret"}
+                    if sensitive_keys.intersection(body_json.keys()):
+                        body_info = "<sensitive data redacted>"
+                    else:
+                        body_info = json.dumps(body_json)
+                else:
+                    body_info = "<body too large>"
             except Exception:
                 body_info = "<unreadable JSON body>"
         elif content_type.startswith("multipart/form-data"):
