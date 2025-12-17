@@ -63,6 +63,7 @@ services:
     environment:
       POSTGRES_DATABASE_URL: postgresql+asyncpg://beercap_user_postgres:beercap_pass_postgres@db:5432/beercap_db_postgres
       MINIO_ENDPOINT: http://minio:9000
+      MINIO_EXTERNAL_ENDPOINT: localhost:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       MINIO_SECURE: "false"

@@ -9,10 +9,7 @@ from src.api.schemas.augmented_beer_cap.augmented_cap_create import (
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.api.schemas.country.country_create import CountryCreateSchema
 from src.config import settings
-from src.db.crud.augmented_cap_crud import (
-    create_augmented_cap,
-    get_all_augmented_caps,
-)
+from src.db.crud.augmented_cap_crud import create_augmented_cap, get_all_augmented_caps
 from src.db.crud.beer_brand_crud import (
     create_beer_brand,
     get_beer_brand_by_id,
@@ -111,6 +108,9 @@ class BeerCapFacade:
                 country = await self.get_or_create_country(
                     session, cap_metadata.country_id, cap_metadata.country_name
                 )
+
+                await session.flush()
+
                 beer = await create_beer(
                     session,
                     name=cap_metadata.beer_name,
@@ -118,6 +118,9 @@ class BeerCapFacade:
                     country_id=country.id if country else None,
                     commit=False,
                 )
+
+                await session.flush()
+
             else:
                 return None
 
@@ -129,6 +132,7 @@ class BeerCapFacade:
                 image_length,
                 content_type,
             )
+
             created_cap = await create_beer_cap(
                 session, beer.id, object_name, cap_metadata
             )

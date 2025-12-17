@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 from src.config import settings
 from src.storage.minio.minio_client import MinioClientWrapper
@@ -27,6 +28,24 @@ async def ensure_buckets_exist() -> None:
 
     minio_wrapper = MinioClientWrapper()
     minio_wrapper.ensure_buckets_exist(buckets)
+
+    for bucket in buckets:
+        policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {"AWS": ["*"]},
+                    "Action": ["s3:GetObject"],
+                    "Resource": [f"arn:aws:s3:::{bucket}/*"],
+                }
+            ],
+        }
+        try:
+            minio_wrapper.client.set_bucket_policy(bucket, json.dumps(policy))
+            print(f"✅ Set public policy for bucket: {bucket}")
+        except Exception as e:
+            print(f"⚠️ Failed to set policy for {bucket}: {e}")
 
 
 if __name__ == "__main__":

@@ -22,12 +22,32 @@ class MinioClientWrapper:
         secret_key: Optional[str] = None,
         secure: Optional[bool] = None,
     ) -> None:
-        raw = (endpoint if endpoint is not None else settings.minio_endpoint).strip()
+        self.client = self._create_minio_client(
+            endpoint or settings.minio_endpoint, access_key, secret_key, secure
+        )
 
-        # Normalize: add scheme if missing so urlparse works consistently
+        external_endpoint = (
+            settings.minio_external_endpoint or endpoint or settings.minio_endpoint
+        )
+
+        if external_endpoint != (endpoint or settings.minio_endpoint):
+            logger.info(
+                "Initializing separate MinIO signer for external endpoint: %s",
+                external_endpoint,
+            )
+            self.signer_client = self._create_minio_client(
+                external_endpoint, access_key, secret_key, secure
+            )
+        else:
+            self.signer_client = self.client
+
+    def _create_minio_client(
+        self, endpoint_str, access_key, secret_key, secure_override
+    ):
+        """Helper to parse URL and create a Minio instance."""
+        raw = endpoint_str.strip()
         parsed = urlparse(raw if "://" in raw else f"http://{raw}")
 
-        # If a path sneaks in (including trailing "/"), strip it but WARN so you can fix envs
         if parsed.path and parsed.path != "":
             logger.warning(
                 "MINIO_ENDPOINT contained a path '%s' -> stripping it. Raw: %r",
@@ -43,25 +63,22 @@ class MinioClientWrapper:
         )
         hostport = f"{host}{port}" if host else (parsed.netloc or raw.split("/", 1)[0])
 
-        # Decide secure: prefer scheme if present, otherwise use provided flag/env
         secure_flag = (
             (parsed.scheme == "https")
             if parsed.scheme
-            else (secure if secure is not None else settings.minio_secure)
+            else (
+                secure_override
+                if secure_override is not None
+                else settings.minio_secure
+            )
         )
 
-        logger.info(
-            "Initializing MinIO client with endpoint=%r (normalized=%r), secure=%s",
-            raw,
-            hostport,
-            secure_flag,
-        )
-
-        self.client = Minio(
+        return Minio(
             hostport,
             access_key=access_key or settings.minio_access_key,
             secret_key=secret_key or settings.minio_secret_key,
             secure=secure_flag,
+            region="us-east-1",
         )
 
     def upload_file(
@@ -211,21 +228,9 @@ class MinioClientWrapper:
     def generate_presigned_url(
         self, bucket_name: str, object_name: str, expiry_seconds: int = 3600
     ) -> str:
-        """Generates a presigned URL for temporary access to an object.
-
-        Args:
-            bucket_name (str): Name of the bucket.
-            object_name (str): Name of the object.
-            expiry_seconds (int): Time in seconds until the URL expires.
-
-        Returns:
-            str: The presigned URL.
-
-        Raises:
-            S3Error: If URL generation fails.
-        """
+        """Generates a presigned URL using the SIGNER client (external host)."""
         try:
-            url = self.client.presigned_get_object(
+            url = self.signer_client.presigned_get_object(
                 bucket_name, object_name, expires=timedelta(seconds=expiry_seconds)
             )
             logger.info(
@@ -233,12 +238,7 @@ class MinioClientWrapper:
             )
             return url
         except S3Error as e:
-            logger.error(
-                "Failed to generate presigned URL for %s in %s: %s",
-                object_name,
-                bucket_name,
-                e,
-            )
+            logger.error("Failed to generate presigned URL: %s", e)
             raise
 
     def ensure_buckets_exist(self, buckets: list[str]) -> None:
