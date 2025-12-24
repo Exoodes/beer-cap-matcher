@@ -34,6 +34,9 @@ class BeerCapCreateSchema(BaseModel):
         default=None,
         description=("Name of a new beer to create; mutually exclusive with beer_id"),
     )
+    rating: Optional[int] = Field(
+        default=0, ge=0, le=10, description="Rating of the beer (0-10)"
+    )
     beer_brand_id: Optional[int] = Field(
         default=None,
         description="ID of an existing beer brand when creating a new beer",

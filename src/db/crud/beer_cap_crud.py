@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_update import BeerCapUpdateSchema
 from src.db.entities.beer_cap_entity import BeerCap
+from src.db.entities.beer_entity import Beer
 
 
 async def create_beer_cap(
@@ -44,7 +45,10 @@ async def get_beer_cap_by_id(
     if load_augmented_caps:
         stmt = stmt.options(selectinload(BeerCap.augmented_caps))
     if load_beer:
-        stmt = stmt.options(selectinload(BeerCap.beer))
+        stmt = stmt.options(
+            selectinload(BeerCap.beer).selectinload(Beer.beer_brand),
+            selectinload(BeerCap.beer).selectinload(Beer.country),
+        )
 
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
@@ -77,7 +81,10 @@ async def get_all_beer_caps(
     if load_augmented_caps:
         stmt = stmt.options(selectinload(BeerCap.augmented_caps))
     if load_beer:
-        stmt = stmt.options(selectinload(BeerCap.beer))
+        stmt = stmt.options(
+            selectinload(BeerCap.beer).selectinload(Beer.beer_brand),
+            selectinload(BeerCap.beer).selectinload(Beer.country),
+        )
 
     result = await session.execute(stmt)
     return list(result.scalars().all())
@@ -102,7 +109,10 @@ async def update_beer_cap(
     stmt = select(BeerCap).where(BeerCap.id == beer_cap_id)
 
     if load_beer:
-        stmt = stmt.options(selectinload(BeerCap.beer))
+        stmt = stmt.options(
+            selectinload(BeerCap.beer).selectinload(Beer.beer_brand),
+            selectinload(BeerCap.beer).selectinload(Beer.country),
+        )
     if load_augmented_caps:
         stmt = stmt.options(selectinload(BeerCap.augmented_caps))
 

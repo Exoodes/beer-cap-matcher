@@ -2,6 +2,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.api.schemas.beer_brand.beer_brand_response_base import BeerBrandResponseBase
 from src.api.schemas.country.country_response_base import CountryResponseBase
 
 
@@ -18,5 +19,8 @@ class BeerResponseBase(BaseModel):
     country: Optional[CountryResponseBase] = Field(
         default=None, description="Country where the beer is produced"
     )
+    beer_brand: Optional[BeerBrandResponseBase] = Field(
+        default=None, description="Brand of the beer"
+    )
 
-    model_config = ConfigDict(from_attributes=True, extra="forbid")
+    model_config = ConfigDict(from_attributes=True, extra="ignore")

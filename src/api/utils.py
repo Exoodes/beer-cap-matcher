@@ -15,6 +15,8 @@ def build_beer_cap_response(
         id=beer_cap.beer_id,
         name=beer_cap.beer.name,
         rating=beer_cap.beer.rating,
+        country=beer_cap.beer.country,
+        beer_brand=beer_cap.beer.beer_brand,
     )
 
     return BeerCapResponseWithUrl(

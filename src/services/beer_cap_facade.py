@@ -116,6 +116,7 @@ class BeerCapFacade:
                     name=cap_metadata.beer_name,
                     beer_brand_id=beer_brand.id,
                     country_id=country.id if country else None,
+                    rating=cap_metadata.rating or 0,
                     commit=False,
                 )
 

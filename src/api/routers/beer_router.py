@@ -13,6 +13,7 @@ from src.api.dependencies.facades import get_beer_cap_facade
 from src.api.schemas.beer.beer_create import BeerCreateSchema
 from src.api.schemas.beer.beer_response import BeerResponseWithCaps
 from src.api.schemas.beer.beer_update import BeerUpdateSchema
+from src.api.schemas.beer_brand.beer_brand_response_base import BeerBrandResponseBase
 from src.api.schemas.beer_cap.beer_cap_response_base import BeerCapResponseBase
 from src.api.schemas.common.status_response import StatusResponse
 from src.api.schemas.country.country_response_base import CountryResponseBase
@@ -77,6 +78,11 @@ async def get_all_beers_endpoint(
             id=beer.id,
             name=beer.name,
             rating=beer.rating,
+            beer_brand=(
+                BeerBrandResponseBase.model_validate(beer.beer_brand)
+                if beer.beer_brand
+                else None
+            ),
             caps=(
                 [
                     BeerCapResponseBase(
@@ -177,12 +183,13 @@ async def delete_beer(
     },
 )
 async def update_beer_endpoint(
-    beer_cap_id: int,
+    beer_id: int,
+    beer_cap_id: Annotated[int, Query(...)],
     update_data: BeerUpdateSchema,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> BeerResponseWithCaps:
     updated_beer = await update_beer(
-        db, beer_cap_id, update_data, load_caps=True, load_country=True
+        db, beer_id, update_data, load_caps=True, load_country=True
     )
 
     if not updated_beer:
