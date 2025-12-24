@@ -68,9 +68,15 @@ async def get_all_beers_endpoint(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     include_caps: bool = Query(False, description="Include caps for each beer"),
     include_country: bool = Query(False, description="Include country for each beer"),
+    include_beer_brand: bool = Query(
+        False, description="Include beer brand for each beer"
+    ),
 ) -> list[BeerResponseWithCaps]:
     beers = await get_all_beers(
-        db, load_caps=include_caps, load_country=include_country
+        db,
+        load_caps=include_caps,
+        load_country=include_country,
+        load_beer_brand=include_beer_brand,
     )
 
     return [
@@ -80,7 +86,7 @@ async def get_all_beers_endpoint(
             rating=beer.rating,
             beer_brand=(
                 BeerBrandResponseBase.model_validate(beer.beer_brand)
-                if beer.beer_brand
+                if include_beer_brand and beer.beer_brand
                 else None
             ),
             caps=(

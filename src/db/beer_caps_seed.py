@@ -1,5 +1,3 @@
-# {"file_name": ".jpg", "beer_name": ""},
-
 data = {
     "Česká Republika": {
         "Bernard": {
@@ -37,7 +35,7 @@ data = {
                 {"file_name": "026.jpg", "variant": "Klasické víčko"},
             ],
             "Radegast Hutná 15°": [{"file_name": "077.jpg"}],
-            "Radegast Ratar": [{"file_name": "008.jpg"}],
+            "Radegast Ratar": [{"file_name": "019.jpg"}],
         },
         "Kozel": {
             "Velkopopovický Kozel 11°": [{"file_name": "052.jpg"}],

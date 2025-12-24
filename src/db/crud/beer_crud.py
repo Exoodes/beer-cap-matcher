@@ -55,6 +55,7 @@ async def get_all_beers(
     session: AsyncSession,
     load_caps: bool = False,
     load_country: bool = False,
+    load_beer_brand: bool = False,
 ) -> list[Beer]:
     stmt = select(Beer)
 
@@ -62,6 +63,8 @@ async def get_all_beers(
         stmt = stmt.options(selectinload(Beer.caps))
     if load_country:
         stmt = stmt.options(selectinload(Beer.country))
+    if load_beer_brand:
+        stmt = stmt.options(selectinload(Beer.beer_brand))
 
     result = await session.execute(stmt)
     return list(result.scalars().all())
