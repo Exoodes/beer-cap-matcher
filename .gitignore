@@ -10,3 +10,4 @@ data/models/augmentation_map.json
 .ruff_cache
 .pytest_cache
 .mypy_cache
+.env

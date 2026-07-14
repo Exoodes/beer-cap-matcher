@@ -62,7 +62,7 @@ class CapDetectionService:
                 return cap, augmented_images
 
             loop = asyncio.get_running_loop()
-            with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+            with ThreadPoolExecutor(max_workers=1) as executor:
                 results = await asyncio.gather(
                     *[
                         loop.run_in_executor(executor, process_cap, cap)
