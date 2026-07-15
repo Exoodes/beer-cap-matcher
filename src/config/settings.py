@@ -37,9 +37,11 @@ class Settings(BaseSettings):
     test_minio_access_key: Optional[str] = None
     test_minio_secret_key: Optional[str] = None
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
-
     admin_secret_token: str = "password"
+
+    frontend_url: str = "http://localhost:5173"
+
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
 
 settings = Settings()
