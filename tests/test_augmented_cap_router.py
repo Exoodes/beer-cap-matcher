@@ -40,6 +40,8 @@ def client() -> TestClient:
         yield None
 
     app.dependency_overrides[get_db_session] = override_db
+    app.dependency_overrides[verify_admin] = lambda: None
+    
     return TestClient(app)
 
 

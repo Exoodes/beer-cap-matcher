@@ -20,6 +20,7 @@ from src.db.crud.beer_brand_crud import (
     get_beer_brand_by_id,
     update_beer_brand,
 )
+from src.api.dependencies.auth import verify_admin
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ router = APIRouter(prefix="/beer_brands", tags=["Beer Brands"])
 @router.post(
     "/",
     response_model=BeerBrandResponseWithBeers,
+    dependencies=[Depends(verify_admin)],
     responses={
         422: {"description": "Validation Error"},
         **INTERNAL_SERVER_ERROR_RESPONSE,
@@ -104,6 +106,7 @@ async def get_beer_brand_by_id_endpoint(
 @router.delete(
     "/{beer_brand_id}/",
     response_model=StatusResponse,
+    dependencies=[Depends(verify_admin)],
     responses={**NOT_FOUND_RESPONSE, **INTERNAL_SERVER_ERROR_RESPONSE},
 )
 async def delete_beer_brand_endpoint(
@@ -119,6 +122,7 @@ async def delete_beer_brand_endpoint(
 @router.patch(
     "/{beer_brand_id}/",
     response_model=BeerBrandResponseWithBeers,
+    dependencies=[Depends(verify_admin)],
     responses={
         422: {"description": "Validation Error"},
         **NOT_FOUND_RESPONSE,

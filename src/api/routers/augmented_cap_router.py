@@ -18,10 +18,11 @@ from src.api.schemas.common.status_response import StatusResponse
 from src.db.crud.augmented_cap_crud import get_all_augmented_caps
 from src.services.beer_cap_facade import BeerCapFacade
 from src.services.cap_detection_service import CapDetectionService
+from src.api.dependencies.auth import verify_admin
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/augmented_caps", tags=["Augmented Caps"])
+router = APIRouter(prefix="/augmented_caps", tags=["Augmented Caps"], dependencies=[Depends(verify_admin)])
 
 
 @router.post(

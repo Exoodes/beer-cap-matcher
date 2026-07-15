@@ -24,6 +24,7 @@ from src.db.crud.beer_cap_crud import (
     update_beer_cap,
 )
 from src.services.beer_cap_facade import BeerCapFacade
+from src.api.dependencies.auth import verify_admin
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ router = APIRouter(prefix="/beer_caps", tags=["Beer Caps"])
 @router.post(
     "/",
     response_model=BeerCapResponseWithUrl,
+    dependencies=[Depends(verify_admin)],
     responses={
         404: {"description": "Beer not found"},
         422: {"description": "Validation Error"},
@@ -161,6 +163,7 @@ async def get_beer_cap(
 @router.delete(
     "/{beer_cap_id}/",
     response_model=StatusResponse,
+    dependencies=[Depends(verify_admin)],
     responses={**NOT_FOUND_RESPONSE, **INTERNAL_SERVER_ERROR_RESPONSE},
 )
 async def delete_beer_cap(
@@ -186,6 +189,7 @@ async def delete_beer_cap(
 @router.patch(
     "/{beer_cap_id}/",
     response_model=BeerCapResponseWithUrl,
+    dependencies=[Depends(verify_admin)],
     responses={
         **NOT_FOUND_RESPONSE,
         422: {"description": "Validation Error"},

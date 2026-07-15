@@ -13,12 +13,13 @@ from src.api.schemas.similarity.query_response import (
 )
 from src.services.beer_cap_facade import BeerCapFacade
 from src.services.query_service import QueryService
+from src.api.dependencies.auth import verify_admin
 
 logger = logging.getLogger(__name__)
 
 BAD_REQUEST_RESPONSE: ResponseDict = {400: {"description": "Invalid image format"}}
 
-router = APIRouter(prefix="/similarity", tags=["Similarity"])
+router = APIRouter(prefix="/similarity", tags=["Similarity"], dependencies=[Depends(verify_admin)])
 
 
 @router.post(

@@ -20,6 +20,7 @@ def client() -> TestClient:
         yield None
 
     app.dependency_overrides[get_db_session] = override_db
+    app.dependency_overrides[verify_admin] = lambda: None
 
     class _FacadeStub:
         async def delete_beer_and_caps(self, beer_id: int) -> bool:

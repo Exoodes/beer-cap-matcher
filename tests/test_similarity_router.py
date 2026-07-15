@@ -54,6 +54,7 @@ def client() -> TestClient:
 
     app.dependency_overrides[get_query_service] = lambda: mock_query_service
     app.dependency_overrides[get_beer_cap_facade] = lambda: mock_facade
+    app.dependency_overrides[verify_admin] = lambda: None
 
     return TestClient(app)
 

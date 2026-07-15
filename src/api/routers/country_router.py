@@ -20,6 +20,7 @@ from src.db.crud.country_crud import (
     get_country_by_id,
     update_country,
 )
+from src.api.dependencies.auth import verify_admin
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ router = APIRouter(prefix="/countries", tags=["Countries"])
 @router.post(
     "/",
     response_model=CountryResponseWithBeers,
+    dependencies=[Depends(verify_admin)],
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def create_country_endpoint(
@@ -105,6 +107,7 @@ async def get_country_by_id_endpoint(
 @router.delete(
     "/{country_id}/",
     response_model=CountryResponseBase,
+    dependencies=[Depends(verify_admin)],
     responses={**NOT_FOUND_RESPONSE, **INTERNAL_SERVER_ERROR_RESPONSE},
 )
 async def delete_country_endpoint(
@@ -123,6 +126,7 @@ async def delete_country_endpoint(
 @router.patch(
     "/{country_id}/",
     response_model=CountryResponseWithBeers,
+    dependencies=[Depends(verify_admin)],
     responses={**NOT_FOUND_RESPONSE, **INTERNAL_SERVER_ERROR_RESPONSE},
 )
 async def update_country_endpoint(

@@ -39,5 +39,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
+    admin_secret_token: str = "password"
+
 
 settings = Settings()
