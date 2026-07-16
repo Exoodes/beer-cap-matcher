@@ -12,3 +12,4 @@ models/augmentation_map.json
 .mypy_cache
 .env
 docker-compose.prod.yml
+.vscode
