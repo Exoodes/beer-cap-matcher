@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 
 BAD_REQUEST_RESPONSE: ResponseDict = {400: {"description": "Invalid image format"}}
 
-router = APIRouter(prefix="/similarity", tags=["Similarity"], dependencies=[Depends(verify_admin)])
+router = APIRouter(
+    prefix="/similarity", tags=["Similarity"], dependencies=[Depends(verify_admin)]
+)
 
 
 @router.post(

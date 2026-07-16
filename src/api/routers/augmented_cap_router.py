@@ -22,7 +22,11 @@ from src.api.dependencies.auth import verify_admin
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/augmented_caps", tags=["Augmented Caps"], dependencies=[Depends(verify_admin)])
+router = APIRouter(
+    prefix="/augmented_caps",
+    tags=["Augmented Caps"],
+    dependencies=[Depends(verify_admin)],
+)
 
 
 @router.post(
