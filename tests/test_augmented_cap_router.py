@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from src.api.dependencies.db import get_db_session
 from src.api.dependencies.facades import get_beer_cap_facade
 from src.api.dependencies.services import get_cap_detection_service
+from src.api.dependencies.auth import verify_admin
 
 augmented_cap_router = importlib.import_module("src.api.routers.augmented_cap_router")
 

@@ -6,15 +6,19 @@ from typing import Optional, cast
 import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
+from src.api.dependencies.auth import verify_admin
 
 beer_cap_router = importlib.import_module("src.api.routers.beer_cap_router")
 
 
 class _Beer:
-    def __init__(self, id: int, name: str, rating: Optional[float] = None):
+    def __init__(
+        self, id: int, name: str, rating: Optional[float] = None, country=None
+    ):
         self.id = id
         self.name = name
         self.rating = rating
+        self.country = country
 
 
 class _BeerCap:
@@ -70,6 +74,7 @@ def client(db_session):
     dummy = _DummyFacade()
     app.dependency_overrides[get_db_session] = lambda: db_session
     app.dependency_overrides[get_beer_cap_facade] = lambda: dummy
+    app.dependency_overrides[verify_admin] = lambda: None
 
     with TestClient(app) as c:
         yield c

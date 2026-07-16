@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.api.dependencies.db import get_db_session
+from src.api.dependencies.auth import verify_admin
 
 beer_brand_router = importlib.import_module("src.api.routers.beer_brand_router")
 
