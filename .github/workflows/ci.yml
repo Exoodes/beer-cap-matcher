@@ -36,22 +36,16 @@ jobs:
 
       - name: Start test services
         run: |
-          docker compose -f docker-compose.test.yml up -d
-          echo "Waiting for services to be healthy..."
-          # Try API health for up to ~120s (adjust URL/port if different)
-          for i in {1..60}; do
-            if curl -fsS http://localhost:8000/health >/dev/null 2>&1; then
-              echo "Services ready."
-              break
-            fi
-            sleep 2
-          done
+          # This handles all the waiting automatically now!
+          docker compose -f docker-compose.test.yml up -d --wait
 
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pre-commit mypy pytest-cov
-          pip install -r requirements.txt
+          # ADDED 'wheel' HERE
+          pip install "setuptools<70" wheel
+          pip install -r requirements.txt --no-build-isolation
 
       - name: Run pre-commit
         run: pre-commit run --show-diff-on-failure --color always --all-files

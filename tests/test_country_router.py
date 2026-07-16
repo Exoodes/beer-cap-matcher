@@ -4,7 +4,7 @@ from typing import Optional
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
+from src.api.dependencies.auth import verify_admin
 from src.api.dependencies.db import get_db_session
 
 country_router = importlib.import_module("src.api.routers.country_router")
@@ -20,7 +20,7 @@ def client() -> TestClient:
 
     app.dependency_overrides[get_db_session] = override_db
     app.dependency_overrides[verify_admin] = lambda: None
-    
+
     return TestClient(app)
 
 

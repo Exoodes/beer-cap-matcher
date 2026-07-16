@@ -6,15 +6,25 @@ from typing import Optional, cast
 import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
+from src.api.dependencies.auth import verify_admin
 
 beer_cap_router = importlib.import_module("src.api.routers.beer_cap_router")
 
 
 class _Beer:
-    def __init__(self, id: int, name: str, rating: Optional[float] = None):
+    def __init__(
+        self,
+        id: int,
+        name: str,
+        rating: Optional[float] = None,
+        country=None,
+        beer_brand=None,
+    ):
         self.id = id
         self.name = name
         self.rating = rating
+        self.country = country
+        self.beer_brand = beer_brand
 
 
 class _BeerCap:
@@ -70,6 +80,7 @@ def client(db_session):
     dummy = _DummyFacade()
     app.dependency_overrides[get_db_session] = lambda: db_session
     app.dependency_overrides[get_beer_cap_facade] = lambda: dummy
+    app.dependency_overrides[verify_admin] = lambda: None
 
     with TestClient(app) as c:
         yield c
@@ -82,6 +93,7 @@ def test_create_cap_success(client: TestClient) -> None:
         "beer_name": "Test Beer",
         "beer_brand_id": "10",
         "beer_brand_name": "BrandX",
+        "country_name": "Test Country",
     }
     resp = client.post("/beer_caps/", files=files, data=data)
     assert resp.status_code == 200

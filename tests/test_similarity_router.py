@@ -10,6 +10,7 @@ from src.api.dependencies.facades import get_beer_cap_facade
 from src.api.dependencies.services import get_query_service
 from src.api.routers.similarity_router import router
 from src.api.schemas.similarity.query_response import BeerCapResponseWithQueryResult
+from src.api.dependencies.auth import verify_admin
 
 
 @dataclass
