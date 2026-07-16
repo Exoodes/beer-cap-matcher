@@ -76,3 +76,39 @@ shortcut. To add beer and cap records:
   `BeerCapFacade.create_cap_for_existing_beer_and_upload`.
 
 Both flows upload cap images to MinIO and return the created database entries.
+
+
+
+---
+
+## Local Development Setup
+
+To ensure your local environment matches our CI pipeline, you must use a virtual environment, set up pre-commit hooks, and configure your editor.
+
+### Prerequisites
+* **Python 3.12+** installed on your system. You can verify your installation by running `python --version` in your terminal.
+
+### 1. Virtual Environment
+Create and activate a virtual environment (named `.venv`) to isolate dependencies:
+* **Create:** `python -m venv .venv`
+* **Activate (Mac/Linux):** `source .venv/bin/activate`
+* **Activate (Windows):** `.\.venv\Scripts\activate`
+
+### 2. Install Dependencies & Pre-commit Hooks
+We use `pre-commit` to automatically format code (via Black) and check for common issues before every commit.
+1. With your virtual environment activated, install dependencies:
+   `pip install -r requirements.txt`
+2. Install the git hooks:
+   `pre-commit install`
+
+Once installed, the hooks will run automatically on `git commit`.
+
+### 3. VS Code Configuration
+To format your code automatically on save, install the **Black Formatter** extension (by Microsoft) and ensure your `.vscode/settings.json` includes:
+
+{
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true
+  }
+}
