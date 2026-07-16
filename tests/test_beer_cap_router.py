@@ -13,12 +13,18 @@ beer_cap_router = importlib.import_module("src.api.routers.beer_cap_router")
 
 class _Beer:
     def __init__(
-        self, id: int, name: str, rating: Optional[float] = None, country=None
+        self,
+        id: int,
+        name: str,
+        rating: Optional[float] = None,
+        country=None,
+        beer_brand=None,
     ):
         self.id = id
         self.name = name
         self.rating = rating
         self.country = country
+        self.beer_brand = beer_brand
 
 
 class _BeerCap:
@@ -87,6 +93,7 @@ def test_create_cap_success(client: TestClient) -> None:
         "beer_name": "Test Beer",
         "beer_brand_id": "10",
         "beer_brand_name": "BrandX",
+        "country_name": "Test Country",
     }
     resp = client.post("/beer_caps/", files=files, data=data)
     assert resp.status_code == 200
