@@ -13,6 +13,7 @@ from src.api.routers import (
     beer_router,
     country_router,
     similarity_router,
+    backup_router,
 )
 from src.services.cap_detection_service import CapDetectionService
 from src.services.query_service import QueryService
@@ -70,6 +71,7 @@ app.include_router(country_router)
 app.include_router(augmented_cap_router)
 app.include_router(similarity_router)
 app.include_router(beer_brand_router)
+app.include_router(backup_router)
 
 app.router.redirect_slashes = True
 
