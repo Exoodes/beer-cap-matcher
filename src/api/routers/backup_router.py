@@ -44,7 +44,8 @@ async def create_backup() -> StatusResponse:
                 stdout=f_out,
                 stderr=subprocess.PIPE,
             )
-            pg_dump.stdout.close()  # let pg_dump receive SIGPIPE if gzip exits early
+            if pg_dump.stdout:
+                pg_dump.stdout.close()  # let pg_dump receive SIGPIPE if gzip exits early
             gzip_proc.communicate()
             pg_dump.wait()
 
@@ -101,7 +102,7 @@ async def list_backups() -> list[dict[str, Any]]:
             }
         )
     # Sort by newest first
-    items.sort(key=lambda x: x["created_at"], reverse=True)
+    items.sort(key=lambda x: str(x["created_at"]), reverse=True)
     return items
 
 
