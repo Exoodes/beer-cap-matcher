@@ -16,10 +16,12 @@ async def create_beer_cap(
     s3_key: str,
     data: BeerCapCreateSchema,
     commit: bool = True,
+    thumbnail_s3_key: Optional[str] = None,
 ) -> BeerCap:
     new_cap = BeerCap(
         beer_id=beer_id,
         s3_key=s3_key,
+        thumbnail_s3_key=thumbnail_s3_key,
         variant_name=data.variant_name,
         collected_date=data.collected_date,
     )

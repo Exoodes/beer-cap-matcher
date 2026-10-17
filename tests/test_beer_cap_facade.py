@@ -19,7 +19,7 @@ from src.db.crud.beer_brand_crud import create_beer_brand
 from src.db.crud.beer_cap_crud import get_beer_cap_by_id
 from src.db.crud.beer_crud import create_beer, get_beer_by_id
 from src.db.crud.country_crud import create_country
-from src.services.beer_cap_facade import BeerCapFacade
+from src.services.beer_cap_facade import IMMUTABLE_CACHE_CONTROL, BeerCapFacade
 from tests.conftest import TEST_IMAGE_CONTENT_TYPE, TEST_MINIO_ENDPOINT
 
 
@@ -66,13 +66,21 @@ class TestBeerCapFacade:
         assert beer_cap.s3_key.endswith(".jpg")
         assert cap_filename not in beer_cap.s3_key
 
-        mock_minio_client_wrapper.upload_file.assert_called_once_with(
+        # The original, then its WebP thumbnail; both cacheable forever.
+        original_call, thumbnail_call = (
+            mock_minio_client_wrapper.upload_file.call_args_list
+        )
+        assert original_call.args == (
             facade.original_caps_bucket,
             beer_cap.s3_key,
             dummy_image_file_like,
             len(dummy_image_bytes),
             TEST_IMAGE_CONTENT_TYPE,
+            IMMUTABLE_CACHE_CONTROL,
         )
+        assert beer_cap.thumbnail_s3_key == f"thumbs/{beer_cap.s3_key}.webp"
+        assert thumbnail_call.args[1] == beer_cap.thumbnail_s3_key
+        assert thumbnail_call.args[4:] == ("image/webp", IMMUTABLE_CACHE_CONTROL)
 
         fetched_beer = await get_beer_by_id(db_session, beer_cap.beer_id)
         assert fetched_beer is not None
@@ -184,29 +192,23 @@ class TestBeerCapFacade:
         assert fetched_aug_cap is not None
         assert fetched_aug_cap.s3_key == aug_filename
 
-    async def test_get_presigned_url_for_cap(
-        self, mock_minio_client_wrapper: MagicMock
-    ):
+    async def test_get_image_url(self, mock_minio_client_wrapper: MagicMock):
         facade = BeerCapFacade(minio_wrapper=mock_minio_client_wrapper)
 
+        # Cap images: plain public URLs (stable, so browsers cache them).
         original_s3_key = "original_cap_key_for_url.jpg"
         expected_url_original = (
             f"{TEST_MINIO_ENDPOINT}/{facade.original_caps_bucket}/{original_s3_key}"
         )
-        mock_minio_client_wrapper.generate_presigned_url.return_value = (
-            expected_url_original
-        )
+        mock_minio_client_wrapper.public_url.return_value = expected_url_original
 
-        presigned_url_original = facade.get_presigned_url_for_cap(
-            original_s3_key, is_augmented=False
-        )
+        url_original = facade.get_image_url(original_s3_key, is_augmented=False)
 
-        mock_minio_client_wrapper.generate_presigned_url.assert_called_once_with(
+        mock_minio_client_wrapper.public_url.assert_called_once_with(
             facade.original_caps_bucket, original_s3_key
         )
-        assert presigned_url_original == expected_url_original
-
-        mock_minio_client_wrapper.generate_presigned_url.reset_mock()
+        mock_minio_client_wrapper.generate_presigned_url.assert_not_called()
+        assert url_original == expected_url_original
 
         augmented_s3_key = "augmented_cap_key_for_url.jpg"
         expected_url_augmented = (
@@ -216,7 +218,7 @@ class TestBeerCapFacade:
             expected_url_augmented
         )
 
-        presigned_url_augmented = facade.get_presigned_url_for_cap(
+        presigned_url_augmented = facade.get_image_url(
             augmented_s3_key, is_augmented=True
         )
 
@@ -367,6 +369,8 @@ class TestBeerCapFacade:
         )
         main_cap_id = main_beer_cap.id
         main_cap_s3_key = main_beer_cap.s3_key
+        main_thumbnail_key = main_beer_cap.thumbnail_s3_key
+        assert main_thumbnail_key
 
         aug_files = [f"aug_delete_{i}.jpg" for i in range(2)]
         aug_s3_keys = []
@@ -386,7 +390,7 @@ class TestBeerCapFacade:
         deleted = await facade.delete_beer_and_caps(main_beer_cap.beer.id)
         assert deleted is True
 
-        expected_deleted_s3_keys = [main_cap_s3_key] + aug_s3_keys
+        expected_deleted_s3_keys = [main_cap_s3_key, main_thumbnail_key] + aug_s3_keys
         for s3_key in expected_deleted_s3_keys:
             bucket = (
                 facade.augmented_caps_bucket

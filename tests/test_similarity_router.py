@@ -51,7 +51,7 @@ def client() -> TestClient:
     mock_query_service.query_image = AsyncMock(return_value=([cap], [result]))
 
     mock_facade = MagicMock()
-    mock_facade.get_presigned_url_for_cap.return_value = "http://example.com/test.jpg"
+    mock_facade.get_image_url.return_value = "http://example.com/test.jpg"
 
     app.dependency_overrides[get_query_service] = lambda: mock_query_service
     app.dependency_overrides[get_beer_cap_facade] = lambda: mock_facade

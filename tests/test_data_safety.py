@@ -314,7 +314,7 @@ async def test_caps_by_beer_loads_brand_and_country(
     api: AsyncClient, db_session: AsyncSession
 ) -> None:
     facade = MagicMock()
-    facade.get_presigned_url_for_cap.return_value = "http://x/cap.jpg"
+    facade.get_image_url.return_value = "http://x/cap.jpg"
     api.app.dependency_overrides[get_beer_cap_facade] = lambda: facade  # type: ignore[attr-defined]
     beer_id = await _beer_id(db_session)
     empty = await api.get(f"/beer_caps/by-beer/{beer_id}/")

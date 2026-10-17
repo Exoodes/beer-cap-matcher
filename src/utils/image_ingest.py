@@ -48,3 +48,40 @@ def normalize_image(data: bytes, max_side: int) -> bytes:
     out = io.BytesIO()
     normalized.save(out, format="JPEG", quality=JPEG_QUALITY, optimize=True)
     return out.getvalue()
+
+
+THUMBNAIL_CONTENT_TYPE = "image/webp"
+THUMBNAIL_QUALITY = 80
+
+
+def make_thumbnail(data: bytes, max_side: int) -> bytes:
+    """Creates a small WebP preview of an image for grids and lists.
+
+    Args:
+        data: Image bytes (any format Pillow reads).
+        max_side: Maximum width/height of the thumbnail, in pixels.
+
+    Returns:
+        The WebP bytes.
+
+    Raises:
+        InvalidImageError: If the bytes are not a decodable image.
+    """
+    try:
+        with Image.open(io.BytesIO(data)) as img:
+            if img.width * img.height > MAX_PIXELS:
+                raise InvalidImageError("Image dimensions are too large.")
+            # Lets the JPEG decoder scale down while decoding: much faster
+            # and lighter than decoding full size first.
+            img.draft("RGB", (max_side, max_side))
+            img.load()
+            thumb = ImageOps.exif_transpose(img).convert("RGB")
+    except InvalidImageError:
+        raise
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as e:
+        raise InvalidImageError("Unsupported or corrupt image.") from e
+
+    thumb.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
+    out = io.BytesIO()
+    thumb.save(out, format="WEBP", quality=THUMBNAIL_QUALITY, method=4)
+    return out.getvalue()

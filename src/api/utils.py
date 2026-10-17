@@ -12,7 +12,12 @@ from src.services.beer_cap_facade import BeerCapFacade
 def build_beer_cap_response(
     beer_cap: BeerCap, facade: BeerCapFacade
 ) -> BeerCapResponseWithUrl:
-    url = facade.get_presigned_url_for_cap(beer_cap.s3_key)
+    url = facade.get_image_url(beer_cap.s3_key)
+    thumbnail_url = (
+        facade.get_image_url(beer_cap.thumbnail_s3_key)
+        if beer_cap.thumbnail_s3_key
+        else None
+    )
 
     beer_response = BeerResponseBase(
         id=beer_cap.beer_id,
@@ -35,6 +40,7 @@ def build_beer_cap_response(
         variant_name=beer_cap.variant_name,
         collected_date=cast(Optional[date], beer_cap.collected_date),
         presigned_url=url,
+        thumbnail_url=thumbnail_url,
         beer=beer_response,
     )
 

@@ -43,6 +43,13 @@ class Settings(BaseSettings):
     # Uploaded cap photos: size limit, and longest side after normalization.
     max_upload_bytes: int = 20 * 1024 * 1024
     max_image_side: int = 2048
+    thumbnail_max_side: int = 480
+    # Create missing thumbnails in the background when the API starts.
+    backfill_thumbnails_on_startup: bool = True
+
+    # Cap image buckets are public-read (scripts/setup_minio.py), so plain
+    # URLs work and, unlike presigned ones, stay stable for browser caching.
+    public_image_urls: bool = True
 
     # Loads CLIP/U²-Net and enables the similarity and augmentation endpoints.
     # Off by default: the models need ~1.5 GB of RAM.
