@@ -254,9 +254,9 @@ async def test_deleting_country_still_used_by_beers_is_409(
 
 
 async def test_unknown_brand_id_on_create_is_404(
-    api: AsyncClient, dummy_image_bytes: bytes
+    api: AsyncClient, db_session: AsyncSession, dummy_image_bytes: bytes
 ) -> None:
-    facade = BeerCapFacade(minio_wrapper=MagicMock())
+    facade = _facade(db_session, MagicMock())
     api.app.dependency_overrides[get_beer_cap_facade] = lambda: facade  # type: ignore[attr-defined]
 
     resp = await api.post(
