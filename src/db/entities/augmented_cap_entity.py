@@ -29,7 +29,7 @@ class AugmentedCap(Base):
     )
 
     beer_cap_id: Mapped[int] = mapped_column(
-        ForeignKey("beer_caps.id", ondelete="CASCADE"), nullable=False
+        ForeignKey("beer_caps.id", ondelete="CASCADE"), nullable=False, index=True
     )
     beer_cap: Mapped["BeerCap"] = relationship(back_populates="augmented_caps")
 

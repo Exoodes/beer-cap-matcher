@@ -1,3 +1,4 @@
+import asyncio
 import io
 import logging
 from datetime import date
@@ -23,7 +24,14 @@ from src.db.crud.beer_cap_crud import (
     get_beer_caps_by_beer_id,
     update_beer_cap,
 )
+from src.config import settings
+from src.db.crud.beer_crud import get_beer_by_id
 from src.services.beer_cap_facade import BeerCapFacade
+from src.utils.image_ingest import (
+    NORMALIZED_CONTENT_TYPE,
+    InvalidImageError,
+    normalize_image,
+)
 from src.api.dependencies.auth import verify_admin
 
 logger = logging.getLogger(__name__)
@@ -37,6 +45,8 @@ router = APIRouter(prefix="/beer_caps", tags=["Beer Caps"])
     dependencies=[Depends(verify_admin)],
     responses={
         404: {"description": "Beer not found"},
+        413: {"description": "Image too large"},
+        415: {"description": "Unsupported or corrupt image"},
         422: {"description": "Validation Error"},
         **INTERNAL_SERVER_ERROR_RESPONSE,
     },
@@ -65,10 +75,20 @@ async def create_cap_endpoint(
             status_code=400, detail="Invalid file type. Only images are allowed."
         )
 
-    content_type: str = file.content_type
     filename: str = file.filename or "uploaded_file"
 
-    contents = await file.read()
+    contents = await file.read(settings.max_upload_bytes + 1)
+    if len(contents) > settings.max_upload_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Image is larger than {settings.max_upload_bytes // (1024 * 1024)} MB.",
+        )
+    try:
+        contents = await asyncio.to_thread(
+            normalize_image, contents, settings.max_image_side
+        )
+    except InvalidImageError as e:
+        raise HTTPException(status_code=415, detail=str(e))
     file_like = io.BytesIO(contents)
 
     cap_data = BeerCapCreateSchema(
@@ -88,7 +108,7 @@ async def create_cap_endpoint(
         cap_metadata=cap_data,
         image_data=file_like,
         image_length=len(contents),
-        content_type=content_type,
+        content_type=NORMALIZED_CONTENT_TYPE,
     )
 
     if not beer_cap:
@@ -131,10 +151,10 @@ async def get_all_caps_from_beer(
     """
     Retrieve all beer caps for a specific beer ID.
     """
-    beer_caps = await get_beer_caps_by_beer_id(db, beer_id, load_beer=True)
+    if not await get_beer_by_id(db, beer_id):
+        raise HTTPException(status_code=404, detail="Beer not found.")
 
-    if not beer_caps:
-        raise HTTPException(status_code=404, detail="No beer caps found for this beer.")
+    beer_caps = await get_beer_caps_by_beer_id(db, beer_id, load_beer=True)
 
     return [build_beer_cap_response(cap, beer_cap_facade) for cap in beer_caps]
 

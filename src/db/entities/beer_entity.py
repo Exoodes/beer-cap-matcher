@@ -26,10 +26,10 @@ class Beer(Base):
     rating: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     country_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("countries.id"), nullable=True
+        ForeignKey("countries.id"), nullable=True, index=True
     )
     beer_brand_id: Mapped[int] = mapped_column(
-        ForeignKey("beer_brands.id"), nullable=False
+        ForeignKey("beer_brands.id"), nullable=False, index=True
     )
 
     country: Mapped[Optional["Country"]] = relationship(back_populates="beers")

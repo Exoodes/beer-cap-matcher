@@ -86,8 +86,8 @@ def client(db_session):
         yield c
 
 
-def test_create_cap_success(client: TestClient) -> None:
-    files = {"file": ("cap.jpg", b"\xff\xd8\xff\x00", "image/jpeg")}
+def test_create_cap_success(client: TestClient, dummy_image_bytes: bytes) -> None:
+    files = {"file": ("cap.jpg", dummy_image_bytes, "image/jpeg")}
     data = {
         "variant_name": "Gold Rim",
         "beer_name": "Test Beer",
@@ -128,6 +128,10 @@ def test_get_caps_by_beer_found(
     async def mock_get_by_beer(db, beer_id: int, load_beer: bool = True):
         return [_BeerCap(id=5, beer=_Beer(123, "Found", rating=4.0))]
 
+    async def mock_get_beer(db, beer_id: int):
+        return _Beer(beer_id, "Found")
+
+    monkeypatch.setattr(beer_cap_router, "get_beer_by_id", mock_get_beer)
     monkeypatch.setattr(beer_cap_router, "get_beer_caps_by_beer_id", mock_get_by_beer)
     resp = client.get("/beer_caps/by-beer/123/")
     assert resp.status_code == 200
@@ -138,13 +142,13 @@ def test_get_caps_by_beer_found(
 def test_get_caps_by_beer_not_found(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    async def mock_get_by_beer(db, beer_id: int, load_beer: bool = True):
-        return []
+    async def mock_get_beer(db, beer_id: int):
+        return None
 
-    monkeypatch.setattr(beer_cap_router, "get_beer_caps_by_beer_id", mock_get_by_beer)
+    monkeypatch.setattr(beer_cap_router, "get_beer_by_id", mock_get_beer)
     resp = client.get("/beer_caps/by-beer/999/")
     assert resp.status_code == 404
-    assert resp.json()["detail"] == "No beer caps found for this beer."
+    assert resp.json()["detail"] == "Beer not found."
 
 
 def test_get_cap_by_id_found(

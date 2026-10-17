@@ -28,7 +28,9 @@ class BeerCap(Base):
     variant_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     collected_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
 
-    beer_id: Mapped[int] = mapped_column(ForeignKey("beers.id"), nullable=False)
+    beer_id: Mapped[int] = mapped_column(
+        ForeignKey("beers.id"), nullable=False, index=True
+    )
     beer: Mapped["Beer"] = relationship(back_populates="caps")
 
     augmented_caps: Mapped[list["AugmentedCap"]] = relationship(

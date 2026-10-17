@@ -1,6 +1,10 @@
-import asyncio
+"""Applies database migrations.
 
-from src.db.utils import initialize_database
+Kept under this name because deployments run ``python -m scripts.create_tables``
+on every start.
+"""
+
+from src.db.utils import run_migrations
 
 if __name__ == "__main__":
-    asyncio.run(initialize_database())
+    run_migrations()

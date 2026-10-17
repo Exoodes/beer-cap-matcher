@@ -1,3 +1,6 @@
+import asyncio
+import logging
+import uuid
 from typing import BinaryIO, Callable, Optional
 
 from sqlalchemy import delete
@@ -27,7 +30,17 @@ from src.db.entities.augmented_cap_entity import AugmentedCap
 from src.db.entities.beer_brand_entity import BeerBrand
 from src.db.entities.beer_cap_entity import BeerCap
 from src.db.entities.country_entity import Country
+from src.services.errors import NotFoundError
 from src.storage.minio.minio_client import MinioClientWrapper
+
+logger = logging.getLogger(__name__)
+
+EXTENSIONS = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+
+
+def new_cap_object_name(content_type: str) -> str:
+    """Generates a unique storage key; client filenames are never used as keys."""
+    return f"caps/{uuid.uuid4().hex}{EXTENSIONS.get(content_type, '')}"
 
 
 class BeerCapFacade:
@@ -56,7 +69,7 @@ class BeerCapFacade:
         if beer_brand_id:
             beer_brand = await get_beer_brand_by_id(session, beer_brand_id)
             if not beer_brand:
-                raise ValueError("Beer brand not found")
+                raise NotFoundError("Beer brand not found.")
         elif beer_brand_name:
             beer_brand = await get_beer_brand_by_name(session, beer_brand_name)
             if not beer_brand:
@@ -76,7 +89,7 @@ class BeerCapFacade:
         if country_id:
             country = await get_country_by_id(session, country_id)
             if not country:
-                raise ValueError("Country not found")
+                raise NotFoundError("Country not found.")
             return country
         elif country_name:
             country = await get_country_by_name(session, country_name)
@@ -125,20 +138,9 @@ class BeerCapFacade:
             else:
                 return None
 
-            object_name = cap_metadata.filename
-            self.minio_wrapper.upload_file(
-                self.original_caps_bucket,
-                object_name,
-                image_data,
-                image_length,
-                content_type,
+            created_cap = await self._insert_cap_and_upload(
+                session, beer.id, cap_metadata, image_data, image_length, content_type
             )
-
-            created_cap = await create_beer_cap(
-                session, beer.id, object_name, cap_metadata
-            )
-
-            await session.commit()
 
             fetched_cap = await get_beer_cap_by_id(
                 session, created_cap.id, load_beer=True
@@ -158,22 +160,57 @@ class BeerCapFacade:
             if not beer:
                 return None
 
-            object_name = cap_metadata.filename
-            self.minio_wrapper.upload_file(
-                self.original_caps_bucket,
-                object_name,
-                image_data,
-                image_length,
-                content_type,
-            )
-
-            created_cap = await create_beer_cap(
-                session, beer.id, object_name, cap_metadata
+            created_cap = await self._insert_cap_and_upload(
+                session, beer.id, cap_metadata, image_data, image_length, content_type
             )
             fetched_cap = await get_beer_cap_by_id(
                 session, created_cap.id, load_beer=True
             )
             return fetched_cap
+
+    async def _insert_cap_and_upload(
+        self,
+        session: AsyncSession,
+        beer_id: int,
+        cap_metadata: BeerCapCreateSchema,
+        image_data: BinaryIO,
+        image_length: int,
+        content_type: str,
+    ) -> BeerCap:
+        """Inserts the cap row, uploads its image, then commits.
+
+        If the insert fails nothing is uploaded; if the commit fails the
+        uploaded object is removed again.
+        """
+        object_name = new_cap_object_name(content_type)
+        created_cap = await create_beer_cap(
+            session, beer_id, object_name, cap_metadata, commit=False
+        )
+        await asyncio.to_thread(
+            self.minio_wrapper.upload_file,
+            self.original_caps_bucket,
+            object_name,
+            image_data,
+            image_length,
+            content_type,
+        )
+        try:
+            await session.commit()
+        except Exception:
+            await self._delete_objects(self.original_caps_bucket, [object_name])
+            raise
+        return created_cap
+
+    async def _delete_objects(self, bucket: str, object_names: list[str]) -> None:
+        """Best-effort removal of stored objects after the DB has committed.
+
+        A leftover object is harmless, so failures are logged, not raised.
+        """
+        for name in object_names:
+            try:
+                await asyncio.to_thread(self.minio_wrapper.delete_file, bucket, name)
+            except Exception as e:
+                logger.warning("Failed to delete %s/%s: %s", bucket, name, e)
 
     async def _delete_augmented_caps_helper(
         self, session: AsyncSession, beer_cap_id: int
@@ -185,7 +222,6 @@ class BeerCapFacade:
             return None
 
         for aug in beer_cap.augmented_caps:
-            self.minio_wrapper.delete_file(self.augmented_caps_bucket, aug.s3_key)
             await session.delete(aug)
 
         await session.flush()
@@ -199,34 +235,46 @@ class BeerCapFacade:
             if not beer_cap:
                 return False
 
-            for aug_cap in beer_cap.augmented_caps:
-                self.minio_wrapper.delete_file(
-                    self.augmented_caps_bucket, aug_cap.s3_key
-                )
-
-            self.minio_wrapper.delete_file(self.original_caps_bucket, beer_cap.s3_key)
+            augmented_keys = [aug.s3_key for aug in beer_cap.augmented_caps]
+            original_key = beer_cap.s3_key
 
             await session.delete(beer_cap)
             await session.commit()
-            return True
+
+        await self._delete_objects(self.augmented_caps_bucket, augmented_keys)
+        await self._delete_objects(self.original_caps_bucket, [original_key])
+        return True
 
     async def delete_augmented_caps(self, beer_cap_id: int) -> bool:
         async with self.session_maker() as session:
-            result = await self._delete_augmented_caps_helper(session, beer_cap_id)
+            beer_cap = await get_beer_cap_by_id(
+                session, beer_cap_id, load_augmented_caps=True
+            )
+            if not beer_cap:
+                return False
+            augmented_keys = [aug.s3_key for aug in beer_cap.augmented_caps]
+
+            await self._delete_augmented_caps_helper(session, beer_cap_id)
             await session.commit()
 
-        return result is not None
+        await self._delete_objects(self.augmented_caps_bucket, augmented_keys)
+        return True
 
     async def delete_all_augmented_caps(self) -> int:
         async with self.session_maker() as session:
             augmented_caps = await get_all_augmented_caps(session)
             s3_keys = [aug.s3_key for aug in augmented_caps]
 
-            if s3_keys:
-                self.minio_wrapper.delete_files(self.augmented_caps_bucket, s3_keys)
-
             await session.execute(delete(AugmentedCap))
             await session.commit()
+
+        if s3_keys:
+            try:
+                await asyncio.to_thread(
+                    self.minio_wrapper.delete_files, self.augmented_caps_bucket, s3_keys
+                )
+            except Exception as e:
+                logger.warning("Failed to delete augmented objects: %s", e)
 
         return len(s3_keys)
 
@@ -236,14 +284,24 @@ class BeerCapFacade:
             if not beer:
                 return False
 
+            original_keys: list[str] = []
+            augmented_keys: list[str] = []
             for cap in beer.caps:
+                with_augmented = await get_beer_cap_by_id(
+                    session, cap.id, load_augmented_caps=True
+                )
+                if with_augmented:
+                    augmented_keys += [a.s3_key for a in with_augmented.augmented_caps]
                 await self._delete_augmented_caps_helper(session, cap.id)
-                self.minio_wrapper.delete_file(self.original_caps_bucket, cap.s3_key)
+                original_keys.append(cap.s3_key)
                 await session.delete(cap)
 
             await session.delete(beer)
             await session.commit()
-            return True
+
+        await self._delete_objects(self.augmented_caps_bucket, augmented_keys)
+        await self._delete_objects(self.original_caps_bucket, original_keys)
+        return True
 
     async def add_augmented_cap_and_upload(
         self,
