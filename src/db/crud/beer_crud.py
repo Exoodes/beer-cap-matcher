@@ -104,14 +104,8 @@ async def update_beer(
     if not beer:
         return None
 
-    if update_data.name is not None:
-        beer.name = update_data.name
-    if update_data.rating is not None:
-        beer.rating = update_data.rating
-    if update_data.beer_brand_id is not None:
-        beer.beer_brand_id = update_data.beer_brand_id
-    if update_data.country_id is not None:
-        beer.country_id = update_data.country_id
+    for field, value in update_data.model_dump(exclude_unset=True).items():
+        setattr(beer, field, value)
 
     await session.commit()
     await session.refresh(beer)

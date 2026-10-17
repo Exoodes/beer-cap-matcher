@@ -1,10 +1,12 @@
 from datetime import date
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
+
+from src.api.schemas.common.partial_update import PartialUpdateSchema
 
 
-class BeerCapUpdateSchema(BaseModel):
+class BeerCapUpdateSchema(PartialUpdateSchema):
     """
     Schema for updating a beer cap's variant name or associated beer ID.
     """
@@ -18,5 +20,7 @@ class BeerCapUpdateSchema(BaseModel):
     collected_date: Optional[date] = Field(
         default=None, description="Updated collection date of the beer cap"
     )
+
+    non_nullable_fields = ("beer_id",)
 
     model_config = ConfigDict(from_attributes=True, extra="forbid")

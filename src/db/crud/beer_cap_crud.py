@@ -125,14 +125,8 @@ async def update_beer_cap(
     if not beer_cap:
         return None
 
-    if update_data.variant_name is not None:
-        beer_cap.variant_name = update_data.variant_name
-
-    if update_data.beer_id is not None:
-        beer_cap.beer_id = update_data.beer_id
-
-    if update_data.collected_date is not None:
-        setattr(beer_cap, "collected_date", update_data.collected_date)
+    for field, value in update_data.model_dump(exclude_unset=True).items():
+        setattr(beer_cap, field, value)
 
     await session.commit()
     await session.refresh(beer_cap)

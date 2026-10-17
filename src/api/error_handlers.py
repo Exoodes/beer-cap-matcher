@@ -40,8 +40,12 @@ async def integrity_error_handler(_: Request, exc: Exception) -> JSONResponse:
     code = _sqlstate(exc)
     if code == UNIQUE_VIOLATION:
         detail = "An item with this name already exists."
-    elif code == FOREIGN_KEY_VIOLATION:
+    elif code == FOREIGN_KEY_VIOLATION and (
+        exc.statement or ""
+    ).lstrip().upper().startswith("DELETE"):
         detail = "This item is still used by other records; remove those first."
+    elif code == FOREIGN_KEY_VIOLATION:
+        detail = "A referenced item (beer, brand or country) does not exist."
     else:
         detail = "The change conflicts with existing data."
     logger.info("Integrity error (%s): %s", code, exc.orig)

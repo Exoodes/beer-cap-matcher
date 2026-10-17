@@ -40,8 +40,8 @@ def test_create_beer_brand_success(
 
     monkeypatch.setattr(beer_brand_router, "create_beer_brand", mock_create_brand)
 
-    resp = client.post("/beer_brands/", data={"name": "BrandX"})
-    assert resp.status_code == 200
+    resp = client.post("/beer_brands/", json={"name": "BrandX"})
+    assert resp.status_code == 201
     data = resp.json()
     assert data["id"] == 1
     assert data["name"] == "BrandX"
@@ -132,9 +132,8 @@ def test_delete_beer_brand_success(
     monkeypatch.setattr(beer_brand_router, "delete_beer_brand", mock_delete)
 
     resp = client.delete("/beer_brands/1/")
-    assert resp.status_code == 200
-    payload = resp.json()
-    assert payload.get("success") is True
+    assert resp.status_code == 204
+    assert resp.content == b""
 
 
 def test_delete_beer_brand_not_found(
