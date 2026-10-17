@@ -18,7 +18,7 @@ services:
       retries: 5
 
   minio:
-    image: minio/minio
+    image: chainguard/minio:latest
     container_name: beercap_minio
     command: server /data --console-address ":9001"
     ports:
@@ -30,7 +30,7 @@ services:
     volumes:
       - miniodata:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "mc", "ready", "local"]
       interval: 30s
       timeout: 10s
       retries: 5

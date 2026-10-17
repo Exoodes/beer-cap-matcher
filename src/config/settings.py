@@ -37,7 +37,12 @@ class Settings(BaseSettings):
     test_minio_access_key: Optional[str] = None
     test_minio_secret_key: Optional[str] = None
 
-    admin_secret_token: str = "password"
+    # Admin endpoints reject every request while this is unset.
+    admin_secret_token: Optional[str] = None
+
+    # Loads CLIP/U²-Net and enables the similarity and augmentation endpoints.
+    # Off by default: the models need ~1.5 GB of RAM.
+    enable_matching: bool = False
 
     frontend_url: str = "http://localhost:5173"
 

@@ -5,6 +5,7 @@ import torch
 from torch import nn
 from torchvision.transforms import Compose  # type: ignore[import-untyped]
 
+from src.config import settings
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -20,7 +21,12 @@ def load_model_and_preprocess() -> tuple[nn.Module, Compose]:
 
     try:
         device: str = "cuda" if torch.cuda.is_available() else "cpu"
-        model, preprocess = clip.load("ViT-B/32", device=device)
+        # Cache weights next to U²-Net so they persist in the mounted models volume.
+        model, preprocess = clip.load(
+            "ViT-B/32",
+            device=device,
+            download_root=str(settings.u2net_model_path.parent),
+        )
         logger.info("Loaded CLIP model ViT-B/32")
 
         return model, preprocess
