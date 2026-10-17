@@ -9,16 +9,19 @@ from src.api.constants.responses import (
 )
 from src.api.dependencies.db import get_db_session
 from src.api.schemas.beer.beer_response_base import BeerResponseBase
+from src.api.schemas.common.merge import MergeSchema
 from src.api.schemas.country.country_create import CountryCreateSchema
 from src.api.schemas.country.country_response import CountryResponseWithBeers
 from src.api.schemas.country.country_update import CountryUpdateSchema
 from src.db.crud.country_crud import (
+    count_beers_by_country,
     create_country,
     delete_country,
     get_all_countries,
     get_country_by_id,
     update_country,
 )
+from src.db.crud.merge_crud import merge_countries
 from src.api.dependencies.auth import verify_admin
 
 logger = logging.getLogger(__name__)
@@ -56,11 +59,13 @@ async def get_all_countries_endpoint(
     db: AsyncSession = Depends(get_db_session),
 ) -> list[CountryResponseWithBeers]:
     countries = await get_all_countries(db, load_beers=include_beers)
+    beer_counts = await count_beers_by_country(db)
     return [
         CountryResponseWithBeers(
             id=country.id,
             name=country.name,
             description=country.description,
+            beer_count=beer_counts.get(country.id, 0),
             beers=(
                 [
                     BeerResponseBase(id=beer.id, name=beer.name, rating=beer.rating)
@@ -139,4 +144,46 @@ async def update_country_endpoint(
             BeerResponseBase(id=beer.id, name=beer.name, rating=beer.rating)
             for beer in updated_country.beers
         ],
+    )
+
+
+@router.post(
+    "/{country_id}/merge/",
+    response_model=CountryResponseWithBeers,
+    dependencies=[Depends(verify_admin)],
+    responses={
+        **NOT_FOUND_RESPONSE,
+        422: {"description": "Validation Error"},
+        **INTERNAL_SERVER_ERROR_RESPONSE,
+    },
+)
+async def merge_country_endpoint(
+    country_id: int,
+    data: MergeSchema,
+    db: AsyncSession = Depends(get_db_session),
+) -> CountryResponseWithBeers:
+    """
+    Merge a duplicate country into another: its beers move to `into_id` and
+    the country is deleted.
+    """
+    if country_id == data.into_id:
+        raise HTTPException(
+            status_code=422, detail="A country can't be merged into itself."
+        )
+
+    if not await merge_countries(db, country_id, data.into_id):
+        raise HTTPException(status_code=404, detail="Country not found.")
+    logger.info("Merged country %s into %s", country_id, data.into_id)
+
+    country = await get_country_by_id(db, data.into_id, load_beers=True)
+    assert country
+    return CountryResponseWithBeers(
+        id=country.id,
+        name=country.name,
+        description=country.description,
+        beers=[
+            BeerResponseBase(id=beer.id, name=beer.name, rating=beer.rating)
+            for beer in country.beers
+        ],
+        beer_count=len(country.beers),
     )

@@ -55,13 +55,20 @@ def test_list_beer_brands(client: TestClient, monkeypatch: pytest.MonkeyPatch) -
             _Brand(id=2, name="BrandB", beers=[] if load_beers else None),
         ]
 
+    async def mock_counts(db):
+        return {1: 3}
+
     monkeypatch.setattr(beer_brand_router, "get_all_beer_brands", mock_get_all)
+    monkeypatch.setattr(beer_brand_router, "count_beers_by_brand", mock_counts)
 
     resp = client.get("/beer_brands/")
     assert resp.status_code == 200
     data = resp.json()
     assert isinstance(data, list) and len(data) == 2
-    assert {item["name"] for item in data} == {"BrandA", "BrandB"}
+    assert {item["name"]: item["beer_count"] for item in data} == {
+        "BrandA": 3,
+        "BrandB": 0,
+    }
 
 
 def test_get_beer_brand_by_id_found(

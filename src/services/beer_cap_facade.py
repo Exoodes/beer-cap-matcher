@@ -20,7 +20,11 @@ from src.db.crud.beer_brand_crud import (
     get_beer_brand_by_name,
 )
 from src.db.crud.beer_cap_crud import create_beer_cap, get_beer_cap_by_id
-from src.db.crud.beer_crud import create_beer, get_beer_by_id
+from src.db.crud.beer_crud import (
+    create_beer,
+    get_beer_by_brand_and_name,
+    get_beer_by_id,
+)
 from src.db.crud.country_crud import (
     create_country,
     get_country_by_id,
@@ -139,7 +143,12 @@ class BeerCapFacade:
 
                 await session.flush()
 
-                beer = await create_beer(
+                # The brand already has this beer: add the cap to it instead of
+                # creating a duplicate.
+                existing = await get_beer_by_brand_and_name(
+                    session, beer_brand.id, cap_metadata.beer_name
+                )
+                beer = existing or await create_beer(
                     session,
                     name=cap_metadata.beer_name,
                     beer_brand_id=beer_brand.id,
@@ -231,6 +240,68 @@ class BeerCapFacade:
             await self._delete_objects(self.original_caps_bucket, uploaded)
             raise
         return created_cap
+
+    async def replace_cap_image(
+        self,
+        beer_cap_id: int,
+        image_data: BinaryIO,
+        image_length: int,
+        content_type: str,
+    ) -> Optional[BeerCap]:
+        """Gives a cap a new photo and thumbnail under a new key.
+
+        The cap's augmented images described the old photo, so they are
+        deleted. Old objects are removed only after the commit; if the
+        upload or commit fails, the new objects are removed instead.
+
+        Returns:
+            The updated cap, or None if it doesn't exist.
+        """
+        async with self.session_maker() as session:
+            beer_cap = await get_beer_cap_by_id(
+                session, beer_cap_id, load_augmented_caps=True
+            )
+            if not beer_cap:
+                return None
+            old_keys = [beer_cap.s3_key]
+            if beer_cap.thumbnail_s3_key:
+                old_keys.append(beer_cap.thumbnail_s3_key)
+            augmented_keys = [aug.s3_key for aug in beer_cap.augmented_caps]
+
+            object_name = new_cap_object_name(content_type)
+            image_bytes = image_data.read()
+            image_data.seek(0)
+            thumbnail = await self._make_thumbnail(image_bytes, object_name)
+            thumbnail_name = thumbnail_object_name(object_name) if thumbnail else None
+
+            uploaded = [object_name]
+            try:
+                await asyncio.to_thread(
+                    self.minio_wrapper.upload_file,
+                    self.original_caps_bucket,
+                    object_name,
+                    image_data,
+                    image_length,
+                    content_type,
+                    IMMUTABLE_CACHE_CONTROL,
+                )
+                if thumbnail and thumbnail_name:
+                    await self._upload_thumbnail(thumbnail_name, thumbnail)
+                    uploaded.append(thumbnail_name)
+
+                await self._delete_augmented_caps_helper(session, beer_cap_id)
+                beer_cap.s3_key = object_name
+                beer_cap.thumbnail_s3_key = thumbnail_name
+                await session.commit()
+            except Exception:
+                await self._delete_objects(self.original_caps_bucket, uploaded)
+                raise
+
+            updated = await get_beer_cap_by_id(session, beer_cap_id, load_beer=True)
+
+        await self._delete_objects(self.augmented_caps_bucket, augmented_keys)
+        await self._delete_objects(self.original_caps_bucket, old_keys)
+        return updated
 
     async def _make_thumbnail(self, image_bytes: bytes, key: str) -> Optional[bytes]:
         try:

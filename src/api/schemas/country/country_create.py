@@ -2,11 +2,13 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.api.schemas.common.names import CleanName
+
 
 class CountryCreateSchema(BaseModel):
     """Schema for creating a new country."""
 
-    name: str = Field(
+    name: CleanName = Field(
         ..., min_length=1, max_length=100, description="Name of the country"
     )
     description: Optional[str] = Field(

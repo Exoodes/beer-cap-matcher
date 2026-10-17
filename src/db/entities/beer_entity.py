@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import CheckConstraint, ForeignKey, Integer, String
+from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.entities import Base
@@ -47,3 +47,12 @@ class Beer(Base):
 
     def __str__(self) -> str:
         return f"Beer: {self.name} (ID: {self.id})"
+
+
+# A brand can't have two beers with the same name (ignoring case).
+Index(
+    "uq_beers_brand_name_lower",
+    Beer.beer_brand_id,
+    func.lower(Beer.name),
+    unique=True,
+)

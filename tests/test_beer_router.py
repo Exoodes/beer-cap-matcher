@@ -104,14 +104,18 @@ def test_list_beers(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None
             _Beer(id=2, name="Stout", rating=3, caps=caps, country=country),
         ]
 
+    async def mock_counts(db):
+        return {1: 2}
+
     monkeypatch.setattr(beer_router, "get_all_beers", mock_get_all_beers)
+    monkeypatch.setattr(beer_router, "count_caps_by_beer", mock_counts)
 
     resp = client.get("/beers/")
     assert resp.status_code == 200
     payload = resp.json()
     assert isinstance(payload, list) and len(payload) == 2
-    names = {b["name"] for b in payload}
-    assert names == {"Lager", "Stout"}
+    counts = {b["name"]: b["cap_count"] for b in payload}
+    assert counts == {"Lager": 2, "Stout": 0}
 
 
 def test_get_beer_by_id_found(

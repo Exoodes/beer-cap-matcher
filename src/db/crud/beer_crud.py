@@ -1,10 +1,11 @@
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.api.schemas.beer.beer_update import BeerUpdateSchema
+from src.db.entities.beer_cap_entity import BeerCap
 from src.db.entities.beer_entity import Beer
 
 
@@ -49,6 +50,26 @@ async def get_beer_by_id(
 
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def get_beer_by_brand_and_name(
+    session: AsyncSession, beer_brand_id: int, name: str
+) -> Optional[Beer]:
+    """The brand's beer with this name, ignoring case."""
+    stmt = select(Beer).where(
+        Beer.beer_brand_id == beer_brand_id,
+        func.lower(Beer.name) == func.lower(name),
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def count_caps_by_beer(session: AsyncSession) -> dict[int, int]:
+    """Number of caps of each beer; beers without caps are left out."""
+    result = await session.execute(
+        select(BeerCap.beer_id, func.count()).group_by(BeerCap.beer_id)
+    )
+    return dict(result.tuples().all())
 
 
 async def get_all_beers(

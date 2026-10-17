@@ -1,11 +1,12 @@
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.api.schemas.country.country_create import CountryCreateSchema
 from src.api.schemas.country.country_update import CountryUpdateSchema
+from src.db.entities.beer_entity import Beer
 from src.db.entities.country_entity import Country
 
 
@@ -39,7 +40,8 @@ async def get_country_by_id(
 
 
 async def get_country_by_name(session: AsyncSession, name: str) -> Optional[Country]:
-    stmt = select(Country).where(Country.name == name)
+    """Retrieves a country by its name, ignoring case."""
+    stmt = select(Country).where(func.lower(Country.name) == func.lower(name))
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -55,6 +57,16 @@ async def get_all_countries(
 
     result = await session.execute(stmt)
     return list(result.scalars().all())
+
+
+async def count_beers_by_country(session: AsyncSession) -> dict[int, int]:
+    """Number of beers from each country; countries without beers are left out."""
+    result = await session.execute(
+        select(Beer.country_id, func.count())
+        .where(Beer.country_id.is_not(None))
+        .group_by(Beer.country_id)
+    )
+    return {country_id: count for country_id, count in result.tuples() if country_id}
 
 
 async def delete_country(session: AsyncSession, country_id: int) -> bool:

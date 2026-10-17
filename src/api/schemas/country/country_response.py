@@ -12,3 +12,7 @@ class CountryResponseWithBeers(CountryResponseBase):
     beers: Optional[list[BeerResponseBase]] = Field(
         default=None, description="List of beers produced in this country"
     )
+    beer_count: Optional[int] = Field(
+        default=None,
+        description="Number of beers from this country (in the country list)",
+    )

@@ -111,3 +111,37 @@ def test_partial_legacy_schema_is_refused(empty_database: None) -> None:
 
     with pytest.raises(RuntimeError, match="partial pre-migration schema"):
         run_migrations(MIGRATION_DB_URL)
+
+
+def test_names_differing_in_case_or_spacing_are_merged(empty_database: None) -> None:
+    config = Config(str(ALEMBIC_INI))
+    config.set_main_option("sqlalchemy.url", MIGRATION_DB_URL)
+    command.upgrade(config, "0003")
+    asyncio.run(
+        _execute(
+            "INSERT INTO countries (id, name) VALUES (1, 'Česko'), (2, ' česko ')",
+            "INSERT INTO beer_brands (id, name) VALUES (1, 'Bernard'), "
+            "(2, 'bernard  ')",
+            "INSERT INTO beers (id, name, rating, beer_brand_id, country_id) VALUES "
+            "(1, 'Bernard 12°', 0, 1, 1), (2, 'bernard   12°', 0, 2, 2), "
+            "(3, 'Bernard  11°', 0, 2, 2)",
+            "INSERT INTO beer_caps (id, s3_key, beer_id) VALUES "
+            "(1, 'a.jpg', 1), (2, 'b.jpg', 2), (3, 'c.jpg', 3)",
+        )
+    )
+
+    run_migrations(MIGRATION_DB_URL)
+
+    countries, brands, beers, caps = asyncio.run(
+        _execute(
+            "SELECT id, name FROM countries",
+            "SELECT id, name FROM beer_brands",
+            "SELECT id, name, beer_brand_id, country_id FROM beers ORDER BY id",
+            "SELECT id, beer_id FROM beer_caps ORDER BY id",
+        )
+    )
+    assert countries == [(1, "Česko")]
+    assert brands == [(1, "Bernard")]
+    assert beers == [(1, "Bernard 12°", 1, 1), (3, "Bernard 11°", 1, 1)]
+    assert caps == [(1, 1), (2, 1), (3, 3)]
+    assert asyncio.run(_schema_diff()) == []

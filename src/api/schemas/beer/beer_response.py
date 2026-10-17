@@ -14,3 +14,6 @@ class BeerResponseWithCaps(BeerResponseBase):
     caps: Optional[list[BeerCapResponseBase]] = Field(
         default=None, description="List of caps associated with this beer"
     )
+    cap_count: Optional[int] = Field(
+        default=None, description="Number of caps of this beer (in the beer list)"
+    )

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Integer, String, Text
+from sqlalchemy import Index, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.entities import Base
@@ -25,3 +25,7 @@ class Country(Base):
 
     def __repr__(self) -> str:
         return f"<Country id={self.id} name='{self.name}'>"
+
+
+# Unique ignoring case too: "česká republika" can't sit next to "Česká Republika".
+Index("uq_countries_name_lower", func.lower(Country.name), unique=True)
