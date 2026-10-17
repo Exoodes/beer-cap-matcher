@@ -1,12 +1,5 @@
-"""Application services package."""
+"""Application services package.
 
-from .beer_cap_facade import BeerCapFacade
-from .cap_detection_service import CapDetectionService
-from .query_service import BeerCapNotFoundError, QueryService
-
-__all__ = [
-    "BeerCapFacade",
-    "CapDetectionService",
-    "QueryService",
-    "BeerCapNotFoundError",
-]
+Modules are imported directly (e.g. ``src.services.beer_cap_facade``) so that
+the ML services, which load torch, are only imported when matching is enabled.
+"""

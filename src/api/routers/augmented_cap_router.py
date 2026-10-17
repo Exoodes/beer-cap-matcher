@@ -8,7 +8,7 @@ from src.api.constants.responses import INTERNAL_SERVER_ERROR_RESPONSE
 from src.api.dependencies.db import get_db_session
 from src.api.dependencies.facades import get_beer_cap_facade
 from src.api.dependencies.services import (
-    get_cap_detection_service,
+    CapDetectionServiceDep,
     reload_query_service_index,
 )
 from src.api.schemas.augmented_beer_cap.augmented_beer_cap_response import (
@@ -17,7 +17,6 @@ from src.api.schemas.augmented_beer_cap.augmented_beer_cap_response import (
 from src.api.schemas.common.status_response import StatusResponse
 from src.db.crud.augmented_cap_crud import get_all_augmented_caps
 from src.services.beer_cap_facade import BeerCapFacade
-from src.services.cap_detection_service import CapDetectionService
 from src.api.dependencies.auth import verify_admin
 
 logger = logging.getLogger(__name__)
@@ -35,9 +34,7 @@ router = APIRouter(
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def generate_all_augmented_caps(
-    cap_detection_service: Annotated[
-        CapDetectionService, Depends(get_cap_detection_service)
-    ],
+    cap_detection_service: CapDetectionServiceDep,
     augmentations_per_image: int = Query(
         ..., gt=-1, lt=100, description="Number of augmentations per image"
     ),
@@ -58,9 +55,7 @@ async def generate_all_augmented_caps(
     responses=INTERNAL_SERVER_ERROR_RESPONSE,
 )
 async def generate_embeddings(
-    cap_detection_service: Annotated[
-        CapDetectionService, Depends(get_cap_detection_service)
-    ],
+    cap_detection_service: CapDetectionServiceDep,
 ) -> StatusResponse:
     """
     Generate embeddings for all augmented caps.
@@ -79,9 +74,7 @@ async def generate_embeddings(
 )
 async def generate_index(
     request: Request,
-    cap_detection_service: Annotated[
-        CapDetectionService, Depends(get_cap_detection_service)
-    ],
+    cap_detection_service: CapDetectionServiceDep,
 ) -> StatusResponse:
     """
     Generate index for all augmented cap embeddings.

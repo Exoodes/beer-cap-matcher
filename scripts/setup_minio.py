@@ -18,8 +18,10 @@ async def ensure_buckets_exist() -> None:
     buckets = [
         settings.minio_original_caps_bucket,
         settings.minio_augmented_caps_bucket,
-        settings.minio_augmented_caps_bucket,
+        settings.minio_index_bucket,
     ]
+    # The index bucket stays private; only cap images are served to browsers.
+    public_buckets = buckets[:2]
 
     if not all(buckets):
         raise ValueError(
@@ -29,7 +31,7 @@ async def ensure_buckets_exist() -> None:
     minio_wrapper = MinioClientWrapper()
     minio_wrapper.ensure_buckets_exist(buckets)
 
-    for bucket in buckets:
+    for bucket in public_buckets:
         policy = {
             "Version": "2012-10-17",
             "Statement": [

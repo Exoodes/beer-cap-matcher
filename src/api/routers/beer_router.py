@@ -205,7 +205,7 @@ async def update_beer_endpoint(
     if not updated_beer:
         raise HTTPException(status_code=404, detail="Beer not found.")
 
-    logger.info("Updated beer %s with data: %s", beer_cap_id, update_data.dict())
+    logger.info("Updated beer %s with data: %s", beer_id, update_data.model_dump())
 
     caps = [
         BeerCapResponseBase(

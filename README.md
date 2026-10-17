@@ -16,10 +16,19 @@ The API will be available at `http://localhost:8000`.
 
 ### Health Checks
 
-- The API exposes a `/health` endpoint returning the service status.
+- `/health` checks that PostgreSQL and MinIO are reachable and returns `503` if
+  either is down. It also reports whether image matching is enabled.
 - `docker-compose.yml` defines health checks for the API, PostgreSQL and MinIO services.
 
 Use `docker compose ps` to view container health states.
+
+## Image Matching
+
+Image matching (CLIP embeddings + FAISS) is **off by default**, because the
+models need about 1.5 GB of RAM. Without it the API still serves the whole
+collection; the `/similarity` and augmentation endpoints return `503`.
+Set `ENABLE_MATCHING=true` to turn it on. CLIP weights are then downloaded to
+the same directory as the U²-Net model on first start.
 
 ## U²-Net Model
 
@@ -28,7 +37,7 @@ background removal. By default the model weights are expected at
 `models/u2net.pth`. You can download the weights with:
 
 ```bash
-python scripts/download_u2net.py
+python -m scripts.download_u2net
 ```
 
 To store the model in a different location, set the `U2NET_MODEL_PATH`

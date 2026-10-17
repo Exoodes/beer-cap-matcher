@@ -2,11 +2,8 @@
 env/
 __pycache__
 data/augmented
-models/embeddings.pkl
-models/metadata.pkl
-models/faiss.index
-models/u2net.pth
-models/augmentation_map.json
+# Model weights (U²-Net, CLIP) and generated index files
+models/
 .ruff_cache
 .pytest_cache
 .mypy_cache

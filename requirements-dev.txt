@@ -1,0 +1,17 @@
+-r requirements.txt
+
+cfgv==3.4.0
+distlib==0.4.0
+identify==2.6.13
+iniconfig==2.1.0
+mypy==1.17.1
+mypy_extensions==1.1.0
+nodeenv==1.9.1
+pathspec==0.12.1
+pluggy==1.6.0
+pre_commit==4.3.0
+Pygments==2.19.2
+pytest==8.4.1
+pytest-asyncio==1.0.0
+virtualenv==20.33.1
+pytest-cov

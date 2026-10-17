@@ -33,7 +33,7 @@ class CapDetectionService:
 
         self.original_caps_bucket = settings.minio_original_caps_bucket
         self.augmented_caps_bucket = settings.minio_augmented_caps_bucket
-        self.index_bucket = settings.minio_augmented_caps_bucket
+        self.index_bucket = settings.minio_index_bucket
         self.u2net_model_path: Path = Path(
             u2net_model_path or settings.u2net_model_path
         )
@@ -85,7 +85,7 @@ class CapDetectionService:
             await session.commit()
         return created
 
-    async def generate_embeddings(self) -> dict:
+    async def generate_embeddings(self) -> int:
         session = self.session_maker()
         async with session:
             augmented_caps = await get_all_augmented_caps(session)
@@ -104,7 +104,7 @@ class CapDetectionService:
                 aug_cap.embedding_vector = embedding_tensor.tolist()
 
             await session.commit()
-            return {"updated_embeddings": len(augmented_caps)}
+            return len(augmented_caps)
 
     async def generate_index(self) -> int:
         session = self.session_maker()

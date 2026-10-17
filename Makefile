@@ -10,18 +10,8 @@ clean:
 	@echo "🧹 Cleaned all generated files."
 
 setup:
-	$(PYTHON) -m src.main --download-bg-model
+	$(PYTHON) -m scripts.download_u2net
 	@echo "✅ Setup complete: U²-Net model downloaded."
-
-pipeline:
-	$(PYTHON) -m src.main --augment --generate-embeddings --index
-	@echo "🚀 Pipeline completed: augmented, embedded, and indexed."
-
-query:
-	$(PYTHON) -m src.main --query $(IMAGE)
-
-repl:
-	$(PYTHON) -m src.main --repl
 
 api:
 	uvicorn src.api.api_runner:app --reload --host 0.0.0.0 --port 8000
@@ -42,13 +32,16 @@ setup-all: setup-postgres setup-minio
 	@echo "🎉 All services set up successfully."
 
 restart-docker:
-	docker-compose down -v
-	docker-compose up -d
+	docker compose down -v
+	docker compose up -d
 	@echo "🔄 Docker services restarted."
 
+test:
+	$(PYTHON) -m pytest
+
 restart-test-docker:
-	docker-compose -f docker-compose.test.yml down -v
-	docker-compose -f docker-compose.test.yml up -d
+	docker compose -f docker-compose.test.yml down -v
+	docker compose -f docker-compose.test.yml up -d
 	@echo "🔄 Test Docker services restarted."
 
-.PHONY: clean setup pipeline query repl api setup-postgres setup-minio setup-all
+.PHONY: clean setup api test setup-postgres seed-postgres setup-minio setup-all restart-docker restart-test-docker

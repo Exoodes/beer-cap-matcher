@@ -6,13 +6,12 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 
 from src.api.constants.responses import INTERNAL_SERVER_ERROR_RESPONSE, ResponseDict
 from src.api.dependencies.facades import get_beer_cap_facade
-from src.api.dependencies.services import get_query_service
+from src.api.dependencies.services import QueryServiceDep
 from src.api.schemas.similarity.query_response import (
     BeerCapResponseWithQueryResult,
     QueryResultResponse,
 )
 from src.services.beer_cap_facade import BeerCapFacade
-from src.services.query_service import QueryService
 from src.api.dependencies.auth import verify_admin
 
 logger = logging.getLogger(__name__)
@@ -33,7 +32,7 @@ router = APIRouter(
     },
 )
 async def query_image(
-    query_service: Annotated[QueryService, Depends(get_query_service)],
+    query_service: QueryServiceDep,
     beer_cap_facade: Annotated[BeerCapFacade, Depends(get_beer_cap_facade)],
     file: UploadFile = File(...),
     top_k: int = Query(3, gt=0, le=15, description="Number of top matches to return"),

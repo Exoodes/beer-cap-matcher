@@ -1,14 +1,15 @@
+from fastapi import Request
+
 from src.storage.minio.minio_client import MinioClientWrapper
 
 
-def get_minio_client() -> MinioClientWrapper:
-    """Gets a Minio client wrapper instance.
+def get_minio_client(request: Request) -> MinioClientWrapper:
+    """Gets the shared Minio client wrapper created at application startup.
 
-    This function serves as a dependency injector. It creates and returns
-    a singleton instance of the `MinioClientWrapper`, which is used to interact
-    with the Minio object storage service.
+    Args:
+        request: The incoming request object.
 
     Returns:
-        MinioClientWrapper: An initialized Minio client wrapper instance.
+        MinioClientWrapper: The application-wide Minio client wrapper.
     """
-    return MinioClientWrapper()
+    return request.app.state.minio_client
