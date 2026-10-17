@@ -79,14 +79,18 @@ def test_list_countries(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> 
             ),
         ]
 
+    async def mock_counts(db):
+        return {2: 5}
+
     monkeypatch.setattr(country_router, "get_all_countries", mock_get_all_countries)
+    monkeypatch.setattr(country_router, "count_beers_by_country", mock_counts)
 
     resp = client.get("/countries/")
     assert resp.status_code == 200
     payload = resp.json()
     assert isinstance(payload, list) and len(payload) == 2
-    names = {c["name"] for c in payload}
-    assert names == {"Czech Republic", "Germany"}
+    counts = {c["name"]: c["beer_count"] for c in payload}
+    assert counts == {"Czech Republic": 0, "Germany": 5}
     assert all("description" in c for c in payload)
 
 

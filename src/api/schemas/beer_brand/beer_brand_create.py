@@ -1,8 +1,10 @@
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.api.schemas.common.names import CleanName
+
 
 class BeerBrandCreateSchema(BaseModel):
-    name: str = Field(
+    name: CleanName = Field(
         ..., min_length=1, max_length=100, description="Name of the beer brand"
     )
 

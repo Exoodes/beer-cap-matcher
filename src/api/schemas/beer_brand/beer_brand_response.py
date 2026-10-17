@@ -11,3 +11,6 @@ class BeerBrandResponseWithBeers(BeerBrandResponseBase):
         default=None,
         description="List of beers produced by this beer brand",
     )
+    beer_count: Optional[int] = Field(
+        default=None, description="Number of beers of this brand (in the brand list)"
+    )

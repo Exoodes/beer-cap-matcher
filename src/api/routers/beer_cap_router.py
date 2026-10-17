@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.constants.responses import (
     INTERNAL_SERVER_ERROR_RESPONSE,
     NOT_FOUND_RESPONSE,
+    ResponseDict,
 )
 from src.api.dependencies.db import get_db_session
 from src.api.dependencies.facades import get_beer_cap_facade
@@ -37,6 +38,33 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/beer_caps", tags=["Beer Caps"])
 
+UPLOAD_ERROR_RESPONSES: ResponseDict = {
+    400: {"description": "Not an image upload"},
+    413: {"description": "Image too large"},
+    415: {"description": "Unsupported or corrupt image"},
+}
+
+
+async def read_cap_image(file: UploadFile) -> bytes:
+    """Checks an uploaded cap photo and returns it normalized (JPEG, max side)."""
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=400, detail="Invalid file type. Only images are allowed."
+        )
+
+    contents = await file.read(settings.max_upload_bytes + 1)
+    if len(contents) > settings.max_upload_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Image is larger than {settings.max_upload_bytes // (1024 * 1024)} MB.",
+        )
+    try:
+        return await asyncio.to_thread(
+            normalize_image, contents, settings.max_image_side
+        )
+    except InvalidImageError as e:
+        raise HTTPException(status_code=415, detail=str(e))
+
 
 @router.post(
     "/",
@@ -45,8 +73,7 @@ router = APIRouter(prefix="/beer_caps", tags=["Beer Caps"])
     dependencies=[Depends(verify_admin)],
     responses={
         404: {"description": "Beer not found"},
-        413: {"description": "Image too large"},
-        415: {"description": "Unsupported or corrupt image"},
+        **UPLOAD_ERROR_RESPONSES,
         422: {"description": "Validation Error"},
         **INTERNAL_SERVER_ERROR_RESPONSE,
     },
@@ -67,28 +94,13 @@ async def create_cap_endpoint(
     """
     Creates a new beer cap. Can optionally create a new beer, beer brand, and/or country.
     - If `beer_id` is provided, a new cap is added to that existing beer.
-    - If `beer_name` is provided, a new beer is created. The beer brand and country
-      will be linked by ID or created by name based on the provided values.
+    - If `beer_name` is provided, the cap goes to the brand's beer of that name
+      (ignoring case), which is created if the brand doesn't have it yet. The
+      brand and country are linked by ID, or by name (ignoring case) and
+      created when missing.
     """
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(
-            status_code=400, detail="Invalid file type. Only images are allowed."
-        )
-
     filename: str = file.filename or "uploaded_file"
-
-    contents = await file.read(settings.max_upload_bytes + 1)
-    if len(contents) > settings.max_upload_bytes:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Image is larger than {settings.max_upload_bytes // (1024 * 1024)} MB.",
-        )
-    try:
-        contents = await asyncio.to_thread(
-            normalize_image, contents, settings.max_image_side
-        )
-    except InvalidImageError as e:
-        raise HTTPException(status_code=415, detail=str(e))
+    contents = await read_cap_image(file)
     file_like = io.BytesIO(contents)
 
     cap_data = BeerCapCreateSchema(
@@ -229,4 +241,38 @@ async def update_beer_cap_endpoint(
         "Updated beer cap %s with data: %s", beer_cap_id, update_data.model_dump()
     )
 
+    return build_beer_cap_response(updated_cap, beer_cap_facade)
+
+
+@router.put(
+    "/{beer_cap_id}/image/",
+    response_model=BeerCapResponseWithUrl,
+    dependencies=[Depends(verify_admin)],
+    responses={
+        **NOT_FOUND_RESPONSE,
+        **UPLOAD_ERROR_RESPONSES,
+        **INTERNAL_SERVER_ERROR_RESPONSE,
+    },
+)
+async def replace_beer_cap_image(
+    beer_cap_id: int,
+    file: UploadFile = File(...),
+    beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
+) -> BeerCapResponseWithUrl:
+    """
+    Replace a beer cap's photo. Its augmented images are deleted, as they
+    were made from the old photo.
+    """
+    contents = await read_cap_image(file)
+
+    updated_cap = await beer_cap_facade.replace_cap_image(
+        beer_cap_id,
+        io.BytesIO(contents),
+        len(contents),
+        NORMALIZED_CONTENT_TYPE,
+    )
+    if not updated_cap:
+        raise HTTPException(status_code=404, detail="Beer cap not found.")
+
+    logger.info("Replaced the image of beer cap %s", beer_cap_id)
     return build_beer_cap_response(updated_cap, beer_cap_facade)

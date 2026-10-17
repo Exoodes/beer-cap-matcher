@@ -3,6 +3,8 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from src.api.schemas.common.names import CleanName
+
 
 class BeerCapCreateSchema(BaseModel):
     """Schema for creating a new beer cap.
@@ -30,8 +32,10 @@ class BeerCapCreateSchema(BaseModel):
             " beer_name"
         ),
     )
-    beer_name: Optional[str] = Field(
+    beer_name: Optional[CleanName] = Field(
         default=None,
+        min_length=1,
+        max_length=100,
         description=("Name of a new beer to create; mutually exclusive with beer_id"),
     )
     rating: Optional[int] = Field(
@@ -41,16 +45,20 @@ class BeerCapCreateSchema(BaseModel):
         default=None,
         description="ID of an existing beer brand when creating a new beer",
     )
-    beer_brand_name: Optional[str] = Field(
+    beer_brand_name: Optional[CleanName] = Field(
         default=None,
+        min_length=1,
+        max_length=100,
         description="Name of a new beer brand when creating a new beer",
     )
     country_id: Optional[int] = Field(
         default=None,
         description="ID of an existing country when creating a new beer",
     )
-    country_name: Optional[str] = Field(
+    country_name: Optional[CleanName] = Field(
         default=None,
+        min_length=1,
+        max_length=100,
         description="Name of a new country when creating a new beer",
     )
 

@@ -2,11 +2,15 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.api.schemas.common.names import CleanName
+
 
 class BeerCreateSchema(BaseModel):
     """Schema for creating a new beer entity."""
 
-    name: str = Field(..., min_length=1, max_length=100, description="Name of the beer")
+    name: CleanName = Field(
+        ..., min_length=1, max_length=100, description="Name of the beer"
+    )
     beer_brand_id: int = Field(
         ..., ge=1, description="ID of the beer brand to which this beer belongs"
     )

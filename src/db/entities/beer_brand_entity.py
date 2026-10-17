@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, String
+from sqlalchemy import Index, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.entities import Base
@@ -31,3 +31,7 @@ class BeerBrand(Base):
 
     def __str__(self) -> str:
         return f"Beer Brand: {self.name} (ID: {self.id})"
+
+
+# Unique ignoring case too: "bernard" can't be added next to "Bernard".
+Index("uq_beer_brands_name_lower", func.lower(BeerBrand.name), unique=True)

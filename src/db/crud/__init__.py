@@ -6,6 +6,7 @@ from . import (
     beer_cap_crud,
     beer_crud,
     country_crud,
+    merge_crud,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "beer_cap_crud",
     "beer_crud",
     "country_crud",
+    "merge_crud",
 ]

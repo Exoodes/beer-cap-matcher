@@ -15,13 +15,16 @@ from src.api.schemas.beer.beer_response import BeerResponseWithCaps
 from src.api.schemas.beer.beer_update import BeerUpdateSchema
 from src.api.schemas.beer_brand.beer_brand_response_base import BeerBrandResponseBase
 from src.api.schemas.beer_cap.beer_cap_response_base import BeerCapResponseBase
+from src.api.schemas.common.merge import MergeSchema
 from src.api.schemas.country.country_response_base import CountryResponseBase
 from src.db.crud.beer_crud import (
+    count_caps_by_beer,
     create_beer,
     get_all_beers,
     get_beer_by_id,
     update_beer,
 )
+from src.db.crud.merge_crud import merge_beers
 from src.services.beer_cap_facade import BeerCapFacade
 from src.api.dependencies.auth import verify_admin
 
@@ -80,6 +83,7 @@ async def get_all_beers_endpoint(
         load_country=include_country,
         load_beer_brand=include_beer_brand,
     )
+    cap_counts = await count_caps_by_beer(db)
 
     return [
         BeerResponseWithCaps(
@@ -103,6 +107,7 @@ async def get_all_beers_endpoint(
                 if include_caps
                 else None
             ),
+            cap_count=cap_counts.get(beer.id, 0),
             country=(
                 CountryResponseBase(
                     id=beer.country.id,
@@ -226,4 +231,56 @@ async def update_beer_endpoint(
         rating=updated_beer.rating,
         caps=caps,
         country=country,
+    )
+
+
+@router.post(
+    "/{beer_id}/merge/",
+    response_model=BeerResponseWithCaps,
+    dependencies=[Depends(verify_admin)],
+    responses={
+        **NOT_FOUND_RESPONSE,
+        422: {"description": "Validation Error"},
+        **INTERNAL_SERVER_ERROR_RESPONSE,
+    },
+)
+async def merge_beer_endpoint(
+    beer_id: int,
+    data: MergeSchema,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> BeerResponseWithCaps:
+    """
+    Merge a duplicate beer into another: its caps move to `into_id` and the
+    beer is deleted. A country or rating the target lacks is taken over.
+    """
+    if beer_id == data.into_id:
+        raise HTTPException(
+            status_code=422, detail="A beer can't be merged into itself."
+        )
+
+    if not await merge_beers(db, beer_id, data.into_id):
+        raise HTTPException(status_code=404, detail="Beer not found.")
+    logger.info("Merged beer %s into beer %s", beer_id, data.into_id)
+
+    beer = await get_beer_by_id(
+        db, data.into_id, load_caps=True, load_beer_brand=True, load_country=True
+    )
+    assert beer
+    return BeerResponseWithCaps(
+        id=beer.id,
+        name=beer.name,
+        rating=beer.rating,
+        beer_brand=BeerBrandResponseBase.model_validate(beer.beer_brand),
+        country=(
+            CountryResponseBase.model_validate(beer.country) if beer.country else None
+        ),
+        caps=[
+            BeerCapResponseBase(
+                id=cap.id,
+                variant_name=cap.variant_name,
+                collected_date=cap.collected_date,
+            )
+            for cap in beer.caps
+        ],
+        cap_count=len(beer.caps),
     )

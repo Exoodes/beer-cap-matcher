@@ -2,11 +2,12 @@ from typing import Optional
 
 from pydantic import ConfigDict, Field
 
+from src.api.schemas.common.names import CleanName
 from src.api.schemas.common.partial_update import PartialUpdateSchema
 
 
 class BeerBrandUpdateSchema(PartialUpdateSchema):
-    name: Optional[str] = Field(
+    name: Optional[CleanName] = Field(
         default=None,
         min_length=1,
         max_length=100,

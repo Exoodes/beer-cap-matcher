@@ -1,11 +1,12 @@
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.api.schemas.beer_brand.beer_brand_update import BeerBrandUpdateSchema
 from src.db.entities.beer_brand_entity import BeerBrand
+from src.db.entities.beer_entity import Beer
 
 
 async def create_beer_brand(
@@ -36,8 +37,8 @@ async def get_beer_brand_by_id(
 async def get_beer_brand_by_name(
     session: AsyncSession, name: str
 ) -> Optional[BeerBrand]:
-    """Retrieves a single beer brand by its name."""
-    stmt = select(BeerBrand).where(BeerBrand.name == name)
+    """Retrieves a single beer brand by its name, ignoring case."""
+    stmt = select(BeerBrand).where(func.lower(BeerBrand.name) == func.lower(name))
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -50,6 +51,14 @@ async def get_all_beer_brands(
         stmt = stmt.options(selectinload(BeerBrand.beers))
     result = await session.execute(stmt)
     return list(result.scalars().all())
+
+
+async def count_beers_by_brand(session: AsyncSession) -> dict[int, int]:
+    """Number of beers of each brand; brands without beers are left out."""
+    result = await session.execute(
+        select(Beer.beer_brand_id, func.count()).group_by(Beer.beer_brand_id)
+    )
+    return dict(result.tuples().all())
 
 
 async def delete_beer_brand(session: AsyncSession, beer_brand_id: int) -> bool:
