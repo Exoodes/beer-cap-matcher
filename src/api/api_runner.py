@@ -20,11 +20,22 @@ from src.api.routers import (
     backup_router,
 )
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
+from src.services.beer_cap_facade import BeerCapFacade
 from src.storage.minio.minio_client import MinioClientWrapper
 from src.utils.logger import get_logger, setup_logging
 
 setup_logging()
 logger = get_logger(__name__)
+
+
+async def _backfill_thumbnails(minio_client: MinioClientWrapper) -> None:
+    """Creates missing cap thumbnails without delaying startup."""
+    try:
+        created = await BeerCapFacade(minio_wrapper=minio_client).backfill_thumbnails()
+        if created:
+            logger.info("Created %d missing cap thumbnails.", created)
+    except Exception:
+        logger.exception("Thumbnail backfill failed")
 
 
 @asynccontextmanager
@@ -61,8 +72,16 @@ async def lifespan(_: FastAPI):
     else:
         logger.info("Image matching disabled (ENABLE_MATCHING=false).")
 
+    backfill_task = None
+    if settings.backfill_thumbnails_on_startup:
+        backfill_task = asyncio.create_task(
+            _backfill_thumbnails(app.state.minio_client)
+        )
+
     logger.info("Services initialized.")
     yield
+    if backfill_task and not backfill_task.done():
+        backfill_task.cancel()
     logger.info("Shutting down app.")
 
 

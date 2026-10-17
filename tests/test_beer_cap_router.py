@@ -44,6 +44,7 @@ class _BeerCap:
         self.beer = beer or _Beer(1, "Lager", rating=4.0)
         self.beer_id = self.beer.id
         self.s3_key = storage_key
+        self.thumbnail_s3_key: Optional[str] = None
 
 
 class _DummyFacade:
@@ -62,7 +63,7 @@ class _DummyFacade:
             storage_key="caps/1.jpg",
         )
 
-    def get_presigned_url_for_cap(self, storage_key: str) -> str:
+    def get_image_url(self, storage_key: str) -> str:
         return f"https://example.test/{storage_key}"
 
     async def delete_beer_cap_and_its_augmented_caps(self, beer_cap_id: int) -> bool:

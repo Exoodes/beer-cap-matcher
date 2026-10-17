@@ -9,6 +9,7 @@ from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -99,7 +100,7 @@ def test_legacy_database_is_stamped_and_duplicate_brands_merged(
             "SELECT DISTINCT beer_brand_id FROM beers",
         )
     )
-    assert version == [("0002",)]
+    assert version == [(ScriptDirectory.from_config(config).get_current_head(),)]
     assert brands == [(1, "Bernard")]
     assert beer_brand_ids == [(1,)]
     assert asyncio.run(_schema_diff()) == []

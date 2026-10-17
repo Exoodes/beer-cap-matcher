@@ -71,7 +71,7 @@ async def query_image(
             id=cap.id,
             variant_name=cap.variant_name,
             collected_date=cast(Optional[date], cap.collected_date),
-            presigned_url=beer_cap_facade.get_presigned_url_for_cap(cap.s3_key),
+            presigned_url=beer_cap_facade.get_image_url(cap.s3_key),
             query_result=QueryResultResponse(
                 mean_similarity=result.mean_similarity,
                 min_similarity=result.min_similarity,

@@ -25,6 +25,8 @@ class BeerCap(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     s3_key: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    # Small WebP for grids; NULL until generated (clients fall back to s3_key).
+    thumbnail_s3_key: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     variant_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     collected_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
 

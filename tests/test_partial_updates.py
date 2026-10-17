@@ -35,7 +35,7 @@ async def api(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
         yield db_session
 
     facade = MagicMock()
-    facade.get_presigned_url_for_cap.return_value = "http://x/cap.jpg"
+    facade.get_image_url.return_value = "http://x/cap.jpg"
     app.dependency_overrides[get_db_session] = session_override
     app.dependency_overrides[verify_admin] = lambda: None
     app.dependency_overrides[get_beer_cap_facade] = lambda: facade

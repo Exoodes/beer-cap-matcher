@@ -1,9 +1,10 @@
 import asyncio
+import io
 import logging
 import uuid
 from typing import BinaryIO, Callable, Optional
 
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas.augmented_beer_cap.augmented_cap_create import (
@@ -32,15 +33,29 @@ from src.db.entities.beer_cap_entity import BeerCap
 from src.db.entities.country_entity import Country
 from src.services.errors import NotFoundError
 from src.storage.minio.minio_client import MinioClientWrapper
+from src.utils.image_ingest import (
+    THUMBNAIL_CONTENT_TYPE,
+    InvalidImageError,
+    make_thumbnail,
+)
 
 logger = logging.getLogger(__name__)
 
 EXTENSIONS = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 
 
+# Generated keys never change content, so browsers may cache them forever.
+IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
+
+
 def new_cap_object_name(content_type: str) -> str:
     """Generates a unique storage key; client filenames are never used as keys."""
     return f"caps/{uuid.uuid4().hex}{EXTENSIONS.get(content_type, '')}"
+
+
+def thumbnail_object_name(original_key: str) -> str:
+    """Thumbnail key derived from the original's (unique) key."""
+    return f"thumbs/{original_key}.webp"
 
 
 class BeerCapFacade:
@@ -177,29 +192,102 @@ class BeerCapFacade:
         image_length: int,
         content_type: str,
     ) -> BeerCap:
-        """Inserts the cap row, uploads its image, then commits.
+        """Inserts the cap row, uploads its image and thumbnail, then commits.
 
         If the insert fails nothing is uploaded; if the commit fails the
-        uploaded object is removed again.
+        uploaded objects are removed again. A thumbnail that can't be made
+        is skipped (the cap then shows its original image).
         """
         object_name = new_cap_object_name(content_type)
+        image_bytes = image_data.read()
+        image_data.seek(0)
+        thumbnail = await self._make_thumbnail(image_bytes, object_name)
+        thumbnail_name = thumbnail_object_name(object_name) if thumbnail else None
+
         created_cap = await create_beer_cap(
-            session, beer_id, object_name, cap_metadata, commit=False
+            session,
+            beer_id,
+            object_name,
+            cap_metadata,
+            commit=False,
+            thumbnail_s3_key=thumbnail_name,
         )
+        uploaded = [object_name]
+        try:
+            await asyncio.to_thread(
+                self.minio_wrapper.upload_file,
+                self.original_caps_bucket,
+                object_name,
+                image_data,
+                image_length,
+                content_type,
+                IMMUTABLE_CACHE_CONTROL,
+            )
+            if thumbnail and thumbnail_name:
+                await self._upload_thumbnail(thumbnail_name, thumbnail)
+                uploaded.append(thumbnail_name)
+            await session.commit()
+        except Exception:
+            await self._delete_objects(self.original_caps_bucket, uploaded)
+            raise
+        return created_cap
+
+    async def _make_thumbnail(self, image_bytes: bytes, key: str) -> Optional[bytes]:
+        try:
+            return await asyncio.to_thread(
+                make_thumbnail, image_bytes, settings.thumbnail_max_side
+            )
+        except InvalidImageError as e:
+            logger.warning("No thumbnail for %s: %s", key, e)
+            return None
+
+    async def _upload_thumbnail(self, name: str, thumbnail: bytes) -> None:
         await asyncio.to_thread(
             self.minio_wrapper.upload_file,
             self.original_caps_bucket,
-            object_name,
-            image_data,
-            image_length,
-            content_type,
+            name,
+            io.BytesIO(thumbnail),
+            len(thumbnail),
+            THUMBNAIL_CONTENT_TYPE,
+            IMMUTABLE_CACHE_CONTROL,
         )
-        try:
-            await session.commit()
-        except Exception:
-            await self._delete_objects(self.original_caps_bucket, [object_name])
-            raise
-        return created_cap
+
+    async def backfill_thumbnails(self) -> int:
+        """Creates thumbnails for caps that don't have one yet.
+
+        Safe to run repeatedly; caps whose image can't be read are skipped and
+        retried next time.
+
+        Returns:
+            The number of thumbnails created.
+        """
+        async with self.session_maker() as session:
+            result = await session.execute(
+                select(BeerCap).where(BeerCap.thumbnail_s3_key.is_(None))
+            )
+            caps = list(result.scalars().all())
+            created = 0
+            for cap in caps:
+                try:
+                    original = await asyncio.to_thread(
+                        self.minio_wrapper.download_bytes,
+                        self.original_caps_bucket,
+                        cap.s3_key,
+                    )
+                    thumbnail = await self._make_thumbnail(original, cap.s3_key)
+                    if thumbnail is None:
+                        continue
+                    name = thumbnail_object_name(cap.s3_key)
+                    await self._upload_thumbnail(name, thumbnail)
+                except Exception as e:
+                    logger.warning(
+                        "Thumbnail backfill failed for %s: %s", cap.s3_key, e
+                    )
+                    continue
+                cap.thumbnail_s3_key = name
+                await session.commit()
+                created += 1
+        return created
 
     async def _delete_objects(self, bucket: str, object_names: list[str]) -> None:
         """Best-effort removal of stored objects after the DB has committed.
@@ -236,13 +324,15 @@ class BeerCapFacade:
                 return False
 
             augmented_keys = [aug.s3_key for aug in beer_cap.augmented_caps]
-            original_key = beer_cap.s3_key
+            original_keys = [beer_cap.s3_key]
+            if beer_cap.thumbnail_s3_key:
+                original_keys.append(beer_cap.thumbnail_s3_key)
 
             await session.delete(beer_cap)
             await session.commit()
 
         await self._delete_objects(self.augmented_caps_bucket, augmented_keys)
-        await self._delete_objects(self.original_caps_bucket, [original_key])
+        await self._delete_objects(self.original_caps_bucket, original_keys)
         return True
 
     async def delete_augmented_caps(self, beer_cap_id: int) -> bool:
@@ -294,6 +384,8 @@ class BeerCapFacade:
                     augmented_keys += [a.s3_key for a in with_augmented.augmented_caps]
                 await self._delete_augmented_caps_helper(session, cap.id)
                 original_keys.append(cap.s3_key)
+                if cap.thumbnail_s3_key:
+                    original_keys.append(cap.thumbnail_s3_key)
                 await session.delete(cap)
 
             await session.delete(beer)
@@ -329,12 +421,19 @@ class BeerCapFacade:
 
             return aug_cap
 
-    def get_presigned_url_for_cap(
-        self, filename: str, is_augmented: bool = False
-    ) -> str:
-        object_name = filename
-        bucket_name = (
-            self.augmented_caps_bucket if is_augmented else self.original_caps_bucket
-        )
+    def get_image_url(self, object_name: str, is_augmented: bool = False) -> str:
+        """Browser URL of a stored image.
 
-        return self.minio_wrapper.generate_presigned_url(bucket_name, object_name)
+        Cap images get plain URLs (the bucket is public-read), which stay the
+        same between requests so browsers cache them. Augmented images, and
+        everything when PUBLIC_IMAGE_URLS is off, get presigned URLs.
+        """
+        if is_augmented:
+            return self.minio_wrapper.generate_presigned_url(
+                self.augmented_caps_bucket, object_name
+            )
+        if settings.public_image_urls:
+            return self.minio_wrapper.public_url(self.original_caps_bucket, object_name)
+        return self.minio_wrapper.generate_presigned_url(
+            self.original_caps_bucket, object_name
+        )

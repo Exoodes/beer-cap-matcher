@@ -2,7 +2,7 @@ import concurrent.futures
 import os
 from datetime import timedelta
 from typing import BinaryIO, Optional
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 from minio import Minio
 from minio.deleteobjects import DeleteObject
@@ -30,6 +30,8 @@ class MinioClientWrapper:
             settings.minio_external_endpoint or endpoint or settings.minio_endpoint
         )
 
+        self.public_base_url = self._base_url(external_endpoint, secure)
+
         if external_endpoint != (endpoint or settings.minio_endpoint):
             logger.info(
                 "Initializing separate MinIO signer for external endpoint: %s",
@@ -40,6 +42,25 @@ class MinioClientWrapper:
             )
         else:
             self.signer_client = self.client
+
+    @staticmethod
+    def _base_url(endpoint_str: str, secure_override: Optional[bool]) -> str:
+        """Browser-facing origin of the endpoint, e.g. https://files.example.com."""
+        raw = endpoint_str.strip().rstrip("/")
+        if "://" in raw:
+            parsed = urlparse(raw)
+            return f"{parsed.scheme}://{parsed.netloc}"
+        secure = (
+            secure_override if secure_override is not None else settings.minio_secure
+        )
+        return f"{'https' if secure else 'http'}://{raw.split('/', 1)[0]}"
+
+    def public_url(self, bucket_name: str, object_name: str) -> str:
+        """Plain, unsigned URL of an object in a public-read bucket.
+
+        Unlike presigned URLs it never changes, so browsers can cache it.
+        """
+        return f"{self.public_base_url}/{bucket_name}/{quote(object_name)}"
 
     def _create_minio_client(
         self, endpoint_str, access_key, secret_key, secure_override
@@ -88,6 +109,7 @@ class MinioClientWrapper:
         data: BinaryIO,
         length: Optional[int] = None,
         content_type: str = "image/png",
+        cache_control: Optional[str] = None,
     ) -> str:
         """Uploads a file to a specified bucket.
 
@@ -123,6 +145,7 @@ class MinioClientWrapper:
                 data=data,
                 length=length,
                 content_type=content_type,
+                metadata={"Cache-Control": cache_control} if cache_control else None,
             )
             logger.info("Uploaded %s to %s.", object_name, bucket_name)
             return object_name
