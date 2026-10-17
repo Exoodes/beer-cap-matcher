@@ -61,11 +61,14 @@ class TestBeerCapFacade:
 
         assert beer_cap is not None
         assert beer_cap.id is not None
-        assert beer_cap.s3_key == cap_filename
+        # Keys are generated server-side, never taken from the client filename.
+        assert beer_cap.s3_key.startswith("caps/")
+        assert beer_cap.s3_key.endswith(".jpg")
+        assert cap_filename not in beer_cap.s3_key
 
         mock_minio_client_wrapper.upload_file.assert_called_once_with(
             facade.original_caps_bucket,
-            cap_filename,
+            beer_cap.s3_key,
             dummy_image_file_like,
             len(dummy_image_bytes),
             TEST_IMAGE_CONTENT_TYPE,
@@ -77,7 +80,7 @@ class TestBeerCapFacade:
 
         fetched_cap = await get_beer_cap_by_id(db_session, beer_cap.id)
         assert fetched_cap is not None
-        assert fetched_cap.s3_key == cap_filename
+        assert fetched_cap.s3_key == beer_cap.s3_key
         assert fetched_cap.collected_date == cap_metadata.collected_date
 
     async def test_create_cap_and_related_entities(

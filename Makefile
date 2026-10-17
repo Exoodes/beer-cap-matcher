@@ -18,7 +18,7 @@ api:
 
 setup-postgres:
 	python -m scripts.create_tables
-	@echo "✅ PostgreSQL tables ensured."
+	@echo "✅ PostgreSQL migrations applied."
 
 seed-postgres:
 	python -m scripts.seed_db

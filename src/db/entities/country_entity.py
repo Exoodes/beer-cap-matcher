@@ -18,7 +18,10 @@ class Country(Base):
     name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
-    beers: Mapped[list["Beer"]] = relationship(back_populates="country")
+    # Never null out beers' country on delete; the FK refuses deleting a country in use.
+    beers: Mapped[list["Beer"]] = relationship(
+        back_populates="country", passive_deletes="all"
+    )
 
     def __repr__(self) -> str:
         return f"<Country id={self.id} name='{self.name}'>"

@@ -65,7 +65,10 @@ async def get_beer_caps_by_beer_id(
     if load_augmented_caps:
         stmt = stmt.options(selectinload(BeerCap.augmented_caps))
     if load_beer:
-        stmt = stmt.options(selectinload(BeerCap.beer))
+        stmt = stmt.options(
+            selectinload(BeerCap.beer).selectinload(Beer.beer_brand),
+            selectinload(BeerCap.beer).selectinload(Beer.country),
+        )
 
     result = await session.execute(stmt)
     return list(result.scalars().all())

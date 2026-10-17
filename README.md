@@ -22,6 +22,30 @@ The API will be available at `http://localhost:8000`.
 
 Use `docker compose ps` to view container health states.
 
+## Database Migrations
+
+The schema is managed with [Alembic](https://alembic.sqlalchemy.org/)
+(`migrations/`). `python -m scripts.create_tables` (run by `make setup-postgres`
+and on every container start) applies all pending migrations. Databases created
+before migrations existed are detected and stamped at the baseline first.
+
+After changing an entity in `src/db/entities`, generate a migration and review it:
+
+```bash
+alembic revision --autogenerate -m "describe the change"
+alembic upgrade head
+```
+
+`tests/test_migrations.py` fails if the migrations and the models drift apart.
+
+## Uploads
+
+Cap photos are validated and normalized on upload: anything Pillow cannot
+decode is rejected with `415`, files over `MAX_UPLOAD_BYTES` (20 MB) with `413`.
+Images are rotated according to their EXIF orientation, downscaled to
+`MAX_IMAGE_SIDE` (2048 px) and stored as JPEG under a generated key
+(`caps/<uuid>.jpg`), never under the client's filename.
+
 ## Image Matching
 
 Image matching (CLIP embeddings + FAISS) is **off by default**, because the

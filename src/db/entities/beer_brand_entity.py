@@ -19,9 +19,12 @@ class BeerBrand(Base):
     __tablename__ = "beer_brands"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
 
-    beers: Mapped[list["Beer"]] = relationship(back_populates="beer_brand")
+    # Never null out beers' brand on delete; the FK refuses deleting a brand in use.
+    beers: Mapped[list["Beer"]] = relationship(
+        back_populates="beer_brand", passive_deletes="all"
+    )
 
     def __repr__(self) -> str:
         return f"<BeerBrand id={self.id} name='{self.name}'>"

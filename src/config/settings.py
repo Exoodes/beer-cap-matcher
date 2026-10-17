@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     # Admin endpoints reject every request while this is unset.
     admin_secret_token: Optional[str] = None
 
+    # Uploaded cap photos: size limit, and longest side after normalization.
+    max_upload_bytes: int = 20 * 1024 * 1024
+    max_image_side: int = 2048
+
     # Loads CLIP/U²-Net and enables the similarity and augmentation endpoints.
     # Off by default: the models need ~1.5 GB of RAM.
     enable_matching: bool = False

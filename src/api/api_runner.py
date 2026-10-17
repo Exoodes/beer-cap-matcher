@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from src.api.error_handlers import register_error_handlers
 from src.api.middleware.http_request_logging_middleware import LogRequestMiddleware
 from src.api.routers import (
     augmented_cap_router,
@@ -67,7 +68,8 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="Beer Cap API", lifespan=lifespan)
 
-# Middleware
+# Middleware. Error handling goes first so it sits inside CORS.
+register_error_handlers(app)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.frontend_url],
