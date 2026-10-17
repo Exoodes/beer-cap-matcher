@@ -96,7 +96,7 @@ def test_create_cap_success(client: TestClient, dummy_image_bytes: bytes) -> Non
         "country_name": "Test Country",
     }
     resp = client.post("/beer_caps/", files=files, data=data)
-    assert resp.status_code == 200
+    assert resp.status_code == 201
     body = resp.json()
     assert body["id"] == 1
     assert body["beer"]["name"] in ("Test Beer", "BeerX")
@@ -201,9 +201,8 @@ def test_update_cap_not_found(
 
 def test_delete_cap_success(client: TestClient) -> None:
     resp = client.delete("/beer_caps/9/")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["success"] is True
+    assert resp.status_code == 204
+    assert resp.content == b""
 
 
 def test_delete_cap_not_found(client: TestClient) -> None:

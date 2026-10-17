@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.constants.responses import (
@@ -12,7 +12,6 @@ from src.api.schemas.beer.beer_response_base import BeerResponseBase
 from src.api.schemas.beer_brand.beer_brand_create import BeerBrandCreateSchema
 from src.api.schemas.beer_brand.beer_brand_response import BeerBrandResponseWithBeers
 from src.api.schemas.beer_brand.beer_brand_update import BeerBrandUpdateSchema
-from src.api.schemas.common.status_response import StatusResponse
 from src.db.crud.beer_brand_crud import (
     create_beer_brand,
     delete_beer_brand,
@@ -30,6 +29,7 @@ router = APIRouter(prefix="/beer_brands", tags=["Beer Brands"])
 @router.post(
     "/",
     response_model=BeerBrandResponseWithBeers,
+    status_code=201,
     dependencies=[Depends(verify_admin)],
     responses={
         422: {"description": "Validation Error"},
@@ -37,11 +37,9 @@ router = APIRouter(prefix="/beer_brands", tags=["Beer Brands"])
     },
 )
 async def create_beer_brand_endpoint(
-    name: str = Form(..., description="Name of the beer brand"),
+    data: BeerBrandCreateSchema,
     db: AsyncSession = Depends(get_db_session),
 ) -> BeerBrandResponseWithBeers:
-    data = BeerBrandCreateSchema(name=name)
-
     beer_brand = await create_beer_brand(db, name=data.name)
     logger.info("Created beer_brand %s", data.name)
     return BeerBrandResponseWithBeers(id=beer_brand.id, name=beer_brand.name, beers=[])
@@ -105,18 +103,17 @@ async def get_beer_brand_by_id_endpoint(
 
 @router.delete(
     "/{beer_brand_id}/",
-    response_model=StatusResponse,
+    status_code=204,
     dependencies=[Depends(verify_admin)],
     responses={**NOT_FOUND_RESPONSE, **INTERNAL_SERVER_ERROR_RESPONSE},
 )
 async def delete_beer_brand_endpoint(
     beer_brand_id: int, db: AsyncSession = Depends(get_db_session)
-) -> StatusResponse:
+) -> None:
     deleted = await delete_beer_brand(db, beer_brand_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="beer_brand not found.")
     logger.info("Deleted beer_brand %s", beer_brand_id)
-    return StatusResponse(success=True, message="beer_brand deleted successfully.")
 
 
 @router.patch(

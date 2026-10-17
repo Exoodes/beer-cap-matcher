@@ -82,7 +82,7 @@ def test_create_beer_success(
             "country_id": 20,
         },
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 201
 
 
 def test_list_beers(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -173,6 +173,7 @@ def test_update_beer_success(
 
     monkeypatch.setattr(beer_router, "update_beer", mock_update_beer)
 
+    # The deployed frontend still sends the old, now unused beer_cap_id; it must be ignored.
     resp = client.patch("/beers/1/?beer_cap_id=1", json={"name": "UpdatedLager"})
     assert resp.status_code == 200
 
@@ -185,7 +186,7 @@ def test_update_beer_not_found(
 
     monkeypatch.setattr(beer_router, "update_beer", mock_update_beer)
 
-    resp = client.patch("/beers/9999/?beer_cap_id=9999", json={"name": "Whatever"})
+    resp = client.patch("/beers/9999/", json={"name": "Whatever"})
     assert resp.status_code == 404
 
 
@@ -199,9 +200,8 @@ def test_delete_beer_success(
     client.app.dependency_overrides[get_beer_cap_facade] = lambda: _FacadeOK()
 
     resp = client.delete("/beers/1/")
-    assert resp.status_code == 200
-    payload = resp.json()
-    assert payload.get("success") is True or payload.get("id") == 1
+    assert resp.status_code == 204
+    assert resp.content == b""
 
 
 def test_delete_beer_not_found(

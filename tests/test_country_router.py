@@ -55,7 +55,7 @@ def test_create_country_success(
     resp = client.post(
         "/countries/", json={"name": "Czech Republic", "description": "Central Europe"}
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 201
     data = resp.json()
     assert data["id"] == 1
     assert data["name"] == "Czech Republic"
@@ -161,44 +161,6 @@ def test_update_country_not_found(
 
     resp = client.patch("/countries/9999/", json={"name": "Atlantis"})
     assert resp.status_code == 404
-
-
-def test_create_country_success(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    async def mock_create_country(*args, **kwargs):
-        name = None
-        desc = None
-
-        if len(args) >= 2:
-            maybe = args[1]
-            if isinstance(maybe, str):
-                name = maybe
-                if len(args) >= 3:
-                    desc = args[2]
-            else:
-                name = getattr(maybe, "name", None)
-                desc = getattr(maybe, "description", None)
-
-        if name is None:
-            model = kwargs.get("create_data") or kwargs.get("create_data_or_name")
-            if model is not None:
-                name = getattr(model, "name", None)
-                desc = getattr(model, "description", None)
-
-        return _Country(id=1, name=name, description=desc, beers=[])
-
-    monkeypatch.setattr(country_router, "create_country", mock_create_country)
-
-    resp = client.post(
-        "/countries/",
-        data={"name": "Czech Republic", "description": "Central Europe"},
-    )
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["id"] == 1
-    assert data["name"] == "Czech Republic"
-    assert data["description"] == "Central Europe"
 
 
 def test_delete_country_not_found(

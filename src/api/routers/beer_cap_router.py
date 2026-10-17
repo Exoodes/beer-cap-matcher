@@ -16,7 +16,6 @@ from src.api.dependencies.facades import get_beer_cap_facade
 from src.api.schemas.beer_cap.beer_cap_create import BeerCapCreateSchema
 from src.api.schemas.beer_cap.beer_cap_response import BeerCapResponseWithUrl
 from src.api.schemas.beer_cap.beer_cap_update import BeerCapUpdateSchema
-from src.api.schemas.common.status_response import StatusResponse
 from src.api.utils import build_beer_cap_response
 from src.db.crud.beer_cap_crud import (
     get_all_beer_caps,
@@ -42,6 +41,7 @@ router = APIRouter(prefix="/beer_caps", tags=["Beer Caps"])
 @router.post(
     "/",
     response_model=BeerCapResponseWithUrl,
+    status_code=201,
     dependencies=[Depends(verify_admin)],
     responses={
         404: {"description": "Beer not found"},
@@ -182,14 +182,14 @@ async def get_beer_cap(
 
 @router.delete(
     "/{beer_cap_id}/",
-    response_model=StatusResponse,
+    status_code=204,
     dependencies=[Depends(verify_admin)],
     responses={**NOT_FOUND_RESPONSE, **INTERNAL_SERVER_ERROR_RESPONSE},
 )
 async def delete_beer_cap(
     beer_cap_id: int,
     beer_cap_facade: BeerCapFacade = Depends(get_beer_cap_facade),
-) -> StatusResponse:
+) -> None:
     """
     Delete a beer cap and its augmented caps.
     """
@@ -199,11 +199,6 @@ async def delete_beer_cap(
         raise HTTPException(status_code=404, detail="Beer cap not found.")
 
     logger.info("Deleted beer cap %s and its augmented caps.", beer_cap_id)
-
-    return StatusResponse(
-        success=True,
-        message="Beer cap and its augmented caps deleted successfully.",
-    )
 
 
 @router.patch(

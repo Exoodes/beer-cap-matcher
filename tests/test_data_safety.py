@@ -207,20 +207,19 @@ async def api(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 
 async def test_duplicate_country_is_409(api: AsyncClient) -> None:
     data = {"name": "Czechia", "description": "x"}
-    assert (await api.post("/countries/", data=data)).status_code == 200
+    assert (await api.post("/countries/", json=data)).status_code == 201
 
-    resp = await api.post("/countries/", data=data)
+    resp = await api.post("/countries/", json=data)
 
     assert resp.status_code == 409
     assert "already exists" in resp.json()["detail"]
 
 
 async def test_duplicate_brand_is_409(api: AsyncClient) -> None:
-    assert (
-        await api.post("/beer_brands/", data={"name": "Bernard"})
-    ).status_code == 200
+    first = await api.post("/beer_brands/", json={"name": "Bernard"})
+    assert first.status_code == 201
 
-    resp = await api.post("/beer_brands/", data={"name": "Bernard"})
+    resp = await api.post("/beer_brands/", json={"name": "Bernard"})
 
     assert resp.status_code == 409
 

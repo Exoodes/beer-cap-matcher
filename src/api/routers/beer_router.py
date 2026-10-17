@@ -15,7 +15,6 @@ from src.api.schemas.beer.beer_response import BeerResponseWithCaps
 from src.api.schemas.beer.beer_update import BeerUpdateSchema
 from src.api.schemas.beer_brand.beer_brand_response_base import BeerBrandResponseBase
 from src.api.schemas.beer_cap.beer_cap_response_base import BeerCapResponseBase
-from src.api.schemas.common.status_response import StatusResponse
 from src.api.schemas.country.country_response_base import CountryResponseBase
 from src.db.crud.beer_crud import (
     create_beer,
@@ -34,6 +33,7 @@ router = APIRouter(prefix="/beers", tags=["Beers"])
 @router.post(
     "/",
     response_model=BeerResponseWithCaps,
+    status_code=201,
     dependencies=[Depends(verify_admin)],
     responses={
         422: {"description": "Validation Error"},
@@ -164,22 +164,20 @@ async def get_beer_by_id_endpoint(
 
 @router.delete(
     "/{beer_id}/",
-    response_model=StatusResponse,
+    status_code=204,
     dependencies=[Depends(verify_admin)],
     responses={**NOT_FOUND_RESPONSE, **INTERNAL_SERVER_ERROR_RESPONSE},
 )
 async def delete_beer(
     beer_id: int,
     beer_cap_facade: Annotated[BeerCapFacade, Depends(get_beer_cap_facade)],
-) -> StatusResponse:
+) -> None:
     deleted = await beer_cap_facade.delete_beer_and_caps(beer_id)
 
     if not deleted:
         raise HTTPException(status_code=404, detail="Beer not found.")
 
     logger.info("Deleted beer %s and its associated caps", beer_id)
-
-    return StatusResponse(success=True, message="Beer deleted successfully.")
 
 
 @router.patch(
@@ -194,7 +192,6 @@ async def delete_beer(
 )
 async def update_beer_endpoint(
     beer_id: int,
-    beer_cap_id: Annotated[int, Query(...)],
     update_data: BeerUpdateSchema,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> BeerResponseWithCaps:
