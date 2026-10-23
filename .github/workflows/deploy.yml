@@ -29,9 +29,18 @@ jobs:
             cd /home/deploy/apps/beer-cap-matcher
             # Stop rather than merge if the checkout on the VPS has diverged.
             git pull --ff-only origin master
-            # --wait: fail the workflow unless the new version gets healthy
-            # (the api's health check allows a 600 s start period).
-            docker compose -f docker-compose.prod.yml up -d --build --wait
+            docker compose -f docker-compose.prod.yml up -d --build
+            # Fail the workflow unless the new api gets healthy (its health
+            # check allows a 600 s start period; wait up to 15 min).
+            # Not `up --wait`: some Compose versions fail it when the
+            # one-off init_db exits, even with 0.
+            for i in $(seq 90); do
+              status=$(docker inspect -f '{{.State.Health.Status}}' beercap_api)
+              [ "$status" = healthy ] && break
+              [ "$status" = unhealthy ] && { echo "api is unhealthy"; exit 1; }
+              sleep 10
+            done
+            [ "$status" = healthy ] || { echo "api not healthy after 15 min"; exit 1; }
             # The replaced image is now untagged; remove it so old images
             # don't fill the disk. Never touches volumes or images in use.
             docker image prune -f
