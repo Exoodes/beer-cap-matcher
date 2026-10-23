@@ -6,6 +6,12 @@ on:
       - master
   workflow_dispatch:
 
+# One deploy at a time: two quick merges mustn't build side by side (each
+# build needs several GB of disk on the VPS).
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -19,6 +25,13 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           command_timeout: 30m
           script: |
+            set -e
             cd /home/deploy/apps/beer-cap-matcher
-            git pull origin master
-            docker compose -f docker-compose.prod.yml up -d --build
+            # Stop rather than merge if the checkout on the VPS has diverged.
+            git pull --ff-only origin master
+            # --wait: fail the workflow unless the new version gets healthy
+            # (the api's health check allows a 600 s start period).
+            docker compose -f docker-compose.prod.yml up -d --build --wait
+            # The replaced image is now untagged; remove it so old images
+            # don't fill the disk. Never touches volumes or images in use.
+            docker image prune -f
