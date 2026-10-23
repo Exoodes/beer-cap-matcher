@@ -6,6 +6,7 @@ from .beer_cap_router import router as beer_cap_router
 from .beer_router import router as beer_router
 from .country_router import router as country_router
 from .similarity_router import router as similarity_router
+from .stats_router import router as stats_router
 from .backup_router import router as backup_router
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     "beer_router",
     "country_router",
     "similarity_router",
+    "stats_router",
     "backup_router",
 ]

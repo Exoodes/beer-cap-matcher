@@ -46,6 +46,14 @@ Images are rotated according to their EXIF orientation, downscaled to
 `MAX_IMAGE_SIDE` (2048 px) and stored as JPEG under a generated key
 (`caps/<uuid>.jpg`), never under the client's filename.
 
+## Stats
+
+`GET /stats/` (public, like the other reads) returns counts over the whole
+collection for the home dashboard: caps, and the beers, brands and countries
+that have caps; caps collected this month and a running total per month (by
+`collected_date`, in Prague time); the 5 caps entered last; every cap's ID.
+A cap created without `collected_date` is dated today.
+
 ## Image Matching
 
 Image matching (CLIP embeddings + FAISS) is **off by default**, because the

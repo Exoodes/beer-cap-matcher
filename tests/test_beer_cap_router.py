@@ -104,6 +104,22 @@ def test_create_cap_success(client: TestClient, dummy_image_bytes: bytes) -> Non
     assert body["presigned_url"].startswith("https://")
 
 
+def test_create_cap_without_date_is_dated_today(
+    client: TestClient, dummy_image_bytes: bytes, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(beer_cap_router, "today_local", lambda: date(2026, 10, 23))
+    new_beer = {"beer_name": "Lager", "beer_brand_name": "B", "country_name": "C"}
+    files = {"file": ("cap.jpg", dummy_image_bytes, "image/jpeg")}
+    resp = client.post("/beer_caps/", files=files, data=new_beer)
+    assert resp.status_code == 201
+    assert resp.json()["collected_date"] == "2026-10-23"
+
+    files = {"file": ("cap.jpg", dummy_image_bytes, "image/jpeg")}
+    data = {**new_beer, "collected_date": "2019-05-01"}
+    resp = client.post("/beer_caps/", files=files, data=data)
+    assert resp.json()["collected_date"] == "2019-05-01"
+
+
 def test_create_cap_invalid_file_type(client: TestClient) -> None:
     files = {"file": ("not-image.txt", b"hello", "text/plain")}
     resp = client.post("/beer_caps/", files=files, data={})

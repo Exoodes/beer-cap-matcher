@@ -33,6 +33,7 @@ from src.utils.image_ingest import (
     normalize_image,
 )
 from src.api.dependencies.auth import verify_admin
+from src.utils.dates import today_local
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +94,7 @@ async def create_cap_endpoint(
 ) -> BeerCapResponseWithUrl:
     """
     Creates a new beer cap. Can optionally create a new beer, beer brand, and/or country.
+    Without `collected_date` the cap is dated today (Prague time).
     - If `beer_id` is provided, a new cap is added to that existing beer.
     - If `beer_name` is provided, the cap goes to the brand's beer of that name
       (ignoring case), which is created if the brand doesn't have it yet. The
@@ -106,7 +108,7 @@ async def create_cap_endpoint(
     cap_data = BeerCapCreateSchema(
         filename=filename,
         variant_name=variant_name,
-        collected_date=collected_date,
+        collected_date=collected_date or today_local(),
         beer_id=beer_id,
         beer_name=beer_name,
         rating=rating,
