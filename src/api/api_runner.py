@@ -17,6 +17,7 @@ from src.api.routers import (
     beer_router,
     country_router,
     similarity_router,
+    stats_router,
     backup_router,
 )
 from src.db.database import GLOBAL_ASYNC_SESSION_MAKER
@@ -106,6 +107,7 @@ app.include_router(augmented_cap_router)
 app.include_router(similarity_router)
 app.include_router(beer_brand_router)
 app.include_router(backup_router)
+app.include_router(stats_router)
 
 
 @app.get("/health", tags=["health"])

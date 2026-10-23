@@ -145,3 +145,25 @@ def test_names_differing_in_case_or_spacing_are_merged(empty_database: None) -> 
     assert beers == [(1, "Bernard 12°", 1, 1), (3, "Bernard 11°", 1, 1)]
     assert caps == [(1, 1), (2, 1), (3, 3)]
     assert asyncio.run(_schema_diff()) == []
+
+
+def test_missing_collected_dates_are_backfilled(empty_database: None) -> None:
+    config = Config(str(ALEMBIC_INI))
+    config.set_main_option("sqlalchemy.url", MIGRATION_DB_URL)
+    command.upgrade(config, "0004")
+    asyncio.run(
+        _execute(
+            "INSERT INTO beer_brands (id, name) VALUES (1, 'Kozel')",
+            "INSERT INTO beers (id, name, rating, beer_brand_id) VALUES "
+            "(1, 'Kozel 11', 0, 1)",
+            "INSERT INTO beer_caps (id, s3_key, beer_id, collected_date) VALUES "
+            "(1, 'a.jpg', 1, NULL), (2, 'b.jpg', 1, DATE '2026-09-26')",
+        )
+    )
+
+    run_migrations(MIGRATION_DB_URL)
+
+    (caps,) = asyncio.run(
+        _execute("SELECT id, collected_date::text FROM beer_caps ORDER BY id")
+    )
+    assert caps == [(1, "2026-01-01"), (2, "2026-09-26")]
