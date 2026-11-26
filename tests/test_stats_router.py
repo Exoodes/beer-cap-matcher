@@ -15,8 +15,9 @@ class _Beer:
 
 
 class _Cap:
-    def __init__(self, id: int, thumbnail: str | None):
+    def __init__(self, id: int, thumbnail: str | None, collected: date | None):
         self.id = id
+        self.collected_date = collected
         self.s3_key = f"caps/{id}.jpg"
         self.thumbnail_s3_key = thumbnail
         self.beer = _Beer()
@@ -44,8 +45,12 @@ def client(monkeypatch: pytest.MonkeyPatch):
             collected_this_month=1,
             growth=[("2026-09", 2), ("2026-10", 3)],
             undated=0,
-            newest=[_Cap(3, "thumbs/3.webp"), _Cap(2, None)],
+            newest=[
+                _Cap(3, "thumbs/3.webp", date(2026, 10, 2)),
+                _Cap(2, None, None),
+            ],
             cap_ids=[1, 2, 3],
+            by_country=[("Czechia", 2), ("Belgium", 1)],
         )
 
     monkeypatch.setattr(stats_router, "get_collection_stats", fake_stats)
@@ -78,15 +83,21 @@ def test_stats_shape(client: TestClient) -> None:
                 "id": 3,
                 "beer": "Kozel 11",
                 "thumbnail_url": "https://files.test/thumbs/3.webp",
+                "collected_date": "2026-10-02",
             },
             # No thumbnail yet: the full image.
             {
                 "id": 2,
                 "beer": "Kozel 11",
                 "thumbnail_url": "https://files.test/caps/2.jpg",
+                "collected_date": None,
             },
         ],
         "cap_ids": [1, 2, 3],
+        "by_country": [
+            {"country": "Czechia", "caps": 2},
+            {"country": "Belgium", "caps": 1},
+        ],
     }
     # "This month" is Prague's.
     assert client.seen["today"] == date(2026, 10, 23)  # type: ignore[attr-defined]

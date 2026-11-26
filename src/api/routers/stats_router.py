@@ -5,6 +5,7 @@ from src.api.constants.responses import INTERNAL_SERVER_ERROR_RESPONSE
 from src.api.dependencies.db import get_db_session
 from src.api.dependencies.facades import get_beer_cap_facade
 from src.api.schemas.stats.stats_response import (
+    CountryCount,
     GrowthPoint,
     NewestCap,
     StatsResponse,
@@ -27,7 +28,8 @@ async def get_stats(
 ) -> StatsResponse:
     """
     Counts over the whole collection (for the home dashboard): totals, caps
-    collected this month, growth by month, the newest caps and every cap's ID.
+    collected this month, growth by month, the newest caps, every cap's ID and
+    the caps per country.
     Public like the other reads: it shows nothing they don't.
     """
     stats = await get_collection_stats(db, today_local())
@@ -46,8 +48,10 @@ async def get_stats(
                 thumbnail_url=beer_cap_facade.get_image_url(
                     cap.thumbnail_s3_key or cap.s3_key
                 ),
+                collected_date=cap.collected_date,
             )
             for cap in stats.newest
         ],
         cap_ids=stats.cap_ids,
+        by_country=[CountryCount(country=c, caps=n) for c, n in stats.by_country],
     )

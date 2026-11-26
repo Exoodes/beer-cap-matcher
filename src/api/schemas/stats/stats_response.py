@@ -1,3 +1,6 @@
+from datetime import date
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -16,6 +19,16 @@ class NewestCap(BaseModel):
     thumbnail_url: str = Field(
         ..., description="Small image (the full image if no thumbnail exists)"
     )
+    collected_date: Optional[date] = Field(
+        ..., description="When the cap was collected, if known"
+    )
+
+
+class CountryCount(BaseModel):
+    """Caps from one country."""
+
+    country: str
+    caps: int
 
 
 class StatsResponse(BaseModel):
@@ -38,3 +51,8 @@ class StatsResponse(BaseModel):
         ..., description="The last caps entered, newest first"
     )
     cap_ids: list[int] = Field(..., description="Every cap's ID, ascending")
+    by_country: list[CountryCount] = Field(
+        ...,
+        description="Caps per country, most first; beers without a country "
+        "are left out",
+    )
