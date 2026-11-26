@@ -38,11 +38,13 @@ async def test_empty_collection(db_session: AsyncSession) -> None:
     assert stats.undated == 0
     assert stats.newest == []
     assert stats.cap_ids == []
+    assert stats.by_country == []
 
 
 @pytest.mark.asyncio
 async def test_counts_growth_and_newest(db_session: AsyncSession) -> None:
     czechia = await create_country(db_session, CountryCreateSchema(name="Czechia"))
+    belgium = await create_country(db_session, CountryCreateSchema(name="Belgium"))
     # A country and a brand without caps don't count.
     await create_country(db_session, CountryCreateSchema(name="Empty"))
     await create_beer_brand(db_session, "No Caps Brewery")
@@ -50,6 +52,9 @@ async def test_counts_growth_and_newest(db_session: AsyncSession) -> None:
     beer_a = await create_beer(db_session, "Kozel 11", brand.id, country_id=czechia.id)
     beer_b = await create_beer(db_session, "Kozel 10", brand.id)  # no country
     await create_beer(db_session, "Kozel Dark", brand.id)  # no caps
+    beer_c = await create_beer(
+        db_session, "Kozel Belgian", brand.id, country_id=belgium.id
+    )
 
     async def cap(beer_id: int, key: str, collected: date | None) -> int:
         created = await create_beer_cap(
@@ -67,16 +72,20 @@ async def test_counts_growth_and_newest(db_session: AsyncSession) -> None:
         await cap(beer_b.id, "d.jpg", date(2026, 10, 2)),
         await cap(beer_b.id, "e.jpg", None),
         await cap(beer_a.id, "f.jpg", date(2025, 3, 1)),
+        await cap(beer_c.id, "g.jpg", date(2026, 10, 3)),
     ]
 
     stats = await get_collection_stats(db_session, TODAY)
-    assert (stats.caps, stats.beers, stats.brands, stats.countries) == (6, 2, 1, 1)
-    assert stats.collected_this_month == 1
+    assert (stats.caps, stats.beers, stats.brands, stats.countries) == (7, 3, 1, 2)
+    assert stats.collected_this_month == 2
     assert stats.undated == 1
     assert stats.growth[0] == ("2025-03", 1)
-    assert stats.growth[-1] == ("2026-10", 5)
+    assert stats.growth[-1] == ("2026-10", 6)
     assert len(stats.growth) == 20  # Mar 2025 to Oct 2026
     # Newest by entry order (id), not by collected date.
     assert [c.id for c in stats.newest] == ids[::-1][:5]
-    assert stats.newest[0].beer.name == "Kozel 11"
+    assert stats.newest[0].beer.name == "Kozel Belgian"
+    assert stats.newest[0].collected_date == date(2026, 10, 3)
     assert stats.cap_ids == ids
+    # Most caps first; the beer without a country and the empty country left out.
+    assert stats.by_country == [("Czechia", 3), ("Belgium", 1)]

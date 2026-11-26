@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from src.db.entities.beer_cap_entity import BeerCap
 from src.db.entities.beer_entity import Beer
+from src.db.entities.country_entity import Country
 
 NEWEST_COUNT = 5
 
@@ -25,6 +26,8 @@ class CollectionStats:
     undated: int
     newest: list[BeerCap]
     cap_ids: list[int]
+    # (country name, caps), most caps first; beers without a country left out.
+    by_country: list[tuple[str, int]]
 
 
 def _month(d: date) -> str:
@@ -99,6 +102,19 @@ async def get_collection_stats(db: AsyncSession, today: date) -> CollectionStats
         ).all()
     )
     cap_ids = list((await db.scalars(select(BeerCap.id).order_by(BeerCap.id))).all())
+    caps_count = func.count(BeerCap.id)
+    by_country = [
+        (name, n)
+        for name, n in (
+            await db.execute(
+                select(Country.name, caps_count)
+                .join(Beer, Beer.country_id == Country.id)
+                .join(BeerCap, BeerCap.beer_id == Beer.id)
+                .group_by(Country.name)
+                .order_by(caps_count.desc(), Country.name)
+            )
+        ).all()
+    ]
 
     return CollectionStats(
         caps=caps,
@@ -110,4 +126,5 @@ async def get_collection_stats(db: AsyncSession, today: date) -> CollectionStats
         undated=undated,
         newest=newest,
         cap_ids=cap_ids,
+        by_country=by_country,
     )
